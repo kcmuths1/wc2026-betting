@@ -407,7 +407,7 @@ export default function App() {
   const playerTZ = getPlayerTZ(data, player);
 
   return (
-    <div style={{fontFamily:"'Trebuchet MS',sans-serif",background:"#F0F4F0",minHeight:"100vh",display:"flex"}}>
+    <div style={{fontFamily:"'Nunito','Trebuchet MS',system-ui,sans-serif",background:"#0f1923",minHeight:"100vh",display:"flex"}}>
       {/* Responsive Nav — sidebar on desktop, bottom on mobile */}
       <Nav tabs={tabs} tab={tab} setTab={setTab} player={player} isAdmin={isAdmin}
         onLogout={onLogout} saving={saving} stageInfo={stageInfo}/>
@@ -417,9 +417,9 @@ export default function App() {
         <MobileOnly>
           <div style={S.header}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontSize:22}}>⚽</span>
+              <WC26Ball size={26}/>
               <div>
-                <div style={{fontWeight:900,fontSize:14,color:"#FFD700",fontFamily:"Georgia,serif"}}>WC 2026</div>
+                <div style={{fontWeight:900,fontSize:13,background:"linear-gradient(90deg,#f0c040,#f9a825)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>WC 2026</div>
                 <div style={{fontSize:11,color:"#A5D6A7"}}>{isAdmin?"⚙️ Admin":`👤 ${player}`}</div>
               </div>
             </div>
@@ -431,7 +431,7 @@ export default function App() {
           </div>
         </MobileOnly>
         {/* Content — extra bottom padding on mobile to clear the bottom nav */}
-        <div style={{padding:"16px 16px 90px",flex:1,overflowY:"auto"}}>
+        <div style={{padding:"16px 16px 90px",flex:1,overflowY:"auto",background:"#0f1923"}}>
           <div style={{maxWidth:860,margin:"0 auto"}}>
             {tab==="home"          && <HomeTab ranked={ranked} scores={scores} player={player} upcoming={upcoming} recentResults={recentResults} data={data} isAdmin={isAdmin} stageInfo={stageInfo} playerTZ={playerTZ}/>}
             {tab==="leaderboard"   && <Leaderboard ranked={ranked} scores={scores} player={player} data={data}/>}
@@ -696,38 +696,43 @@ function Nav({tabs,tab,setTab,player,isAdmin,onLogout,saving,stageInfo}) {
   // Sidebar (desktop ≥ 768px)
   const sidebar = (
     <div style={{
-      width:200,flexShrink:0,background:"#1A5C2E",minHeight:"100vh",
-      display:"flex",flexDirection:"column",position:"sticky",top:0,
-      boxShadow:"2px 0 12px rgba(0,0,0,.15)",zIndex:90,
+      width:220,flexShrink:0,
+      background:"linear-gradient(180deg,#111c2a 0%,#0d1520 100%)",
+      borderRight:"1px solid rgba(240,192,64,0.12)",
+      minHeight:"100vh",display:"flex",flexDirection:"column",position:"sticky",top:0,
+      boxShadow:"4px 0 24px rgba(0,0,0,.4)",zIndex:90,
     }}>
       {/* Logo */}
-      <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
-        <div style={{fontSize:28,lineHeight:1}}>⚽</div>
-        <div style={{fontWeight:900,fontSize:14,color:"#FFD700",fontFamily:"Georgia,serif",marginTop:6}}>WC 2026</div>
-        <div style={{fontSize:11,color:"#A5D6A7",marginTop:2}}>{isAdmin?"⚙️ Admin":`👤 ${player}`}</div>
-        {saving&&<div style={{fontSize:10,color:"#FFD700",marginTop:2}}>💾 Saving…</div>}
+      <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(240,192,64,0.12)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+          <WC26Ball size={32}/>
+          <div style={{fontWeight:900,fontSize:16,background:"linear-gradient(90deg,#f0c040,#f9a825)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",letterSpacing:"-0.5px"}}>WC 2026</div>
+        </div>
+        <div style={{fontSize:11,color:"#64748b",marginTop:2,fontWeight:600}}>{isAdmin?"⚙️ Admin":`👤 ${player}`}</div>
+        {saving&&<div style={{fontSize:10,color:"#f0c040",marginTop:2}}>💾 Saving…</div>}
       </div>
       {/* Stage pill */}
-      <div style={{padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
-        <div style={{background:"rgba(255,255,255,.12)",borderRadius:20,padding:"3px 10px",fontSize:11,color:"#fff",fontWeight:600,textAlign:"center"}}>{stageInfo.stage}</div>
+      <div style={{padding:"8px 12px",borderBottom:"1px solid rgba(240,192,64,0.1)"}}>
+        <div style={{background:"rgba(240,192,64,0.12)",borderRadius:20,padding:"4px 10px",fontSize:11,color:"#f0c040",fontWeight:700,textAlign:"center",letterSpacing:"0.5px"}}>{stageInfo.stage}</div>
       </div>
       {/* Nav items */}
       <div style={{flex:1,overflowY:"auto",padding:"8px 0"}}>
         {tabs.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{
             width:"100%",display:"flex",alignItems:"center",gap:10,
-            padding:"10px 16px",background:tab===t.id?"rgba(255,255,255,.15)":"none",
-            border:"none",borderLeft:tab===t.id?"3px solid #FFD700":"3px solid transparent",
-            cursor:"pointer",textAlign:"left",transition:"all .15s",
+            padding:"10px 16px",
+            background:tab===t.id?"rgba(240,192,64,0.1)":"none",
+            border:"none",borderLeft:tab===t.id?"3px solid #f0c040":"3px solid transparent",
+            cursor:"pointer",textAlign:"left",transition:"all .12s",borderRadius:"0 8px 8px 0",margin:"1px 0",
           }}>
             <span style={{fontSize:16,flexShrink:0}}>{t.label}</span>
-            <span style={{fontSize:12,fontWeight:tab===t.id?800:400,color:tab===t.id?"#FFD700":"#A5D6A7",whiteSpace:"nowrap"}}>{t.tip}</span>
+            <span style={{fontSize:12,fontWeight:tab===t.id?800:400,color:tab===t.id?"#f0c040":"#475569",whiteSpace:"nowrap",fontWeight:tab===t.id?700:500}}>{t.tip}</span>
           </button>
         ))}
       </div>
       {/* Logout */}
       <div style={{padding:"12px",borderTop:"1px solid rgba(255,255,255,.1)"}}>
-        <button style={{...sBtn,background:"rgba(255,255,255,.1)",color:"#fff",fontSize:12,padding:"8px 12px"}} onClick={onLogout}>
+        <button style={{...sBtn,background:"rgba(239,68,68,0.12)",color:"#ef4444",fontSize:12,padding:"8px 12px",border:"1px solid rgba(239,68,68,0.2)",borderRadius:8}} onClick={onLogout}>
           ✕ Log Out
         </button>
       </div>
@@ -738,24 +743,24 @@ function Nav({tabs,tab,setTab,player,isAdmin,onLogout,saving,stageInfo}) {
   const bottomNav = (
     <div style={{
       position:"fixed",bottom:0,left:0,right:0,
-      background:"#fff",borderTop:"1px solid #e0e0e0",
+      background:"#111c2a",borderTop:"1px solid rgba(240,192,64,0.15)",
       display:"flex",justifyContent:"space-around",
       zIndex:99,padding:"4px 0 6px",
-      boxShadow:"0 -2px 12px rgba(0,0,0,.08)",
+      boxShadow:"0 -4px 20px rgba(0,0,0,.5)",
     }}>
       {tabs.map(t=>(
         <button key={t.id} title={t.tip} onClick={()=>setTab(t.id)} style={{
           flex:1,background:"none",border:"none",
           padding:"4px 2px 2px",cursor:"pointer",
           display:"flex",flexDirection:"column",alignItems:"center",gap:1,
-          color:tab===t.id?"#1B5E20":"#aaa",
+          color:tab===t.id?"#f0c040":"#475569",
           minWidth:0,maxWidth:64,
         }}>
           <span style={{fontSize:17,lineHeight:1}}>{t.label}</span>
           <span style={{fontSize:8,fontWeight:tab===t.id?800:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",width:"100%",textAlign:"center"}}>
             {t.tip}
           </span>
-          {tab===t.id&&<div style={{width:16,height:2,background:"#1B5E20",borderRadius:999,marginTop:1}}/>}
+          {tab===t.id&&<div style={{width:16,height:2,background:"#f0c040",borderRadius:999,marginTop:1}}/>}
         </button>
       ))}
     </div>
@@ -807,7 +812,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
   return (
     <div style={S.sec}>
       {/* Welcome hero */}
-      <div style={{background:"linear-gradient(135deg,#1A5C2E,#0D3B1E)",borderRadius:16,padding:"20px 20px 16px",marginBottom:16,position:"relative",overflow:"hidden"}}>
+      <div style={{background:"linear-gradient(135deg,#1a2535 0%,#0d1520 60%,#111c2a 100%)",border:"1px solid rgba(240,192,64,0.15)",borderRadius:16,padding:"20px 20px 16px",marginBottom:16,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",right:-10,top:-10,fontSize:80,opacity:.08}}>⚽</div>
         <div style={{color:"#A5D6A7",fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:2,marginBottom:4}}>
           {isAdmin ? "Admin Dashboard" : `Welcome back`}
@@ -822,7 +827,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
             ["📅","Stage",stageInfo.stage],
             ...(myScore?[["🏆","My Points",myScore.total],["🎯","My Rank",`#${myRank}`]]:[]),
           ].map(([ic,l,v])=>(
-            <div key={l} style={{background:"rgba(255,255,255,.1)",borderRadius:10,padding:"8px 12px",minWidth:70}}>
+            <div key={l} style={{background:"rgba(240,192,64,0.08)",border:"1px solid rgba(240,192,64,0.15)",borderRadius:10,padding:"8px 12px",minWidth:70}}>
               <div style={{color:"#FFD700",fontSize:11,marginBottom:2}}>{ic} {l}</div>
               <div style={{color:"#fff",fontSize:18,fontWeight:900}}>{v}</div>
             </div>
@@ -832,7 +837,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
 
       {/* Gap tracker */}
       {!isAdmin && myScore && ranked.length > 1 && (
-        <div style={{background:"#fff",borderRadius:14,padding:16,marginBottom:16,boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+        <div style={{background:T.bgCard,border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:16,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,.25)"}}>
           <div style={S.blockTitle}>🎯 Can You Still Win?</div>
           {ranked.map(([name,s],i)=>{
             const maxPerMatch = POINTS.exactScore;
@@ -860,7 +865,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
       {motd && (()=>{
         const converted = convertToTZ(motd.date, motd.time, tz);
         return (
-          <div style={{background:"linear-gradient(135deg,#B71C1C,#880E4F)",borderRadius:14,padding:16,marginBottom:16,color:"#fff"}}>
+          <div style={{background:"linear-gradient(135deg,#7c1d1d 0%,#4a0e2b 100%)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:14,padding:16,marginBottom:16,color:"#fff"}}>
             <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2,opacity:.7,marginBottom:6}}>⚡ Next Match</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
               <div style={{fontWeight:900,fontSize:16,flex:1}}>{motd.home}</div>
@@ -877,16 +882,16 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
 
       {/* Upcoming */}
       {upcoming.length>0 && (
-        <div style={{background:"#fff",borderRadius:14,padding:16,marginBottom:16,boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+        <div style={{background:T.bgCard,border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:16,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,.25)"}}>
           <div style={S.blockTitle}>📅 Upcoming Matches <span style={{fontSize:11,color:"#888",fontWeight:400}}>({TIMEZONES.find(t=>t.id===tz)?.abbr||"ET"})</span></div>
           {upcoming.slice(0,5).map(m=>{
             const c = convertToTZ(m.date, m.time, tz);
             const { home, away } = getMatchTeams(m, data);
             return (
-              <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid #f5f5f5"}}>
+              <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
                 <div style={{background:STAGE_COLORS[m.stage]||"#333",color:"#fff",borderRadius:6,padding:"2px 6px",fontSize:10,fontWeight:700,minWidth:24,textAlign:"center"}}>{m.id}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13}}>{home} <span style={{color:"#ccc",fontWeight:400}}>vs</span> {away}</div>
+                  <div style={{fontWeight:700,fontSize:13,color:T.text}}>{home} <span style={{color:T.textMute,fontWeight:400}}>vs</span> {away}</div>
                   <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time}{c.dayShift!==0&&" ⚠️"}</div>
                 </div>
                 <div style={{fontSize:10,color:"#888",textAlign:"right"}}>{m.city}</div>
@@ -903,9 +908,9 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
           {recentResults.map(m=>{
             const r=data.matchActuals[m.id];
             return (
-              <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid #f5f5f5"}}>
+              <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
                 <div style={{background:STAGE_COLORS[m.stage]||"#333",color:"#fff",borderRadius:6,padding:"2px 6px",fontSize:10,fontWeight:700}}>{m.id}</div>
-                <div style={{flex:1,fontSize:13,fontWeight:600}}>{m.home} <span style={{color:"#1B5E20",fontWeight:900,background:"#E8F5E9",padding:"1px 6px",borderRadius:4}}>{r?.score}</span> {m.away}</div>
+                <div style={{flex:1,fontSize:13,fontWeight:600}}>{m.home} <span style={{color:"#22c55e",fontWeight:900,background:"rgba(34,197,94,0.12)",padding:"1px 6px",borderRadius:4}}>{r?.score}</span> {m.away}</div>
                 {r?.winner&&<div style={{fontSize:11,color:"#1B5E20",fontWeight:700}}>⚽ {r.winner}</div>}
               </div>
             );
@@ -927,7 +932,7 @@ function Leaderboard({ranked,scores,player,data}) {
       {/* Points key */}
       <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:14}}>
         {[["🏆","20"],["🥈","12"],["🥉","8"],["⚽","15"],["🎖","15"],["🧤","12"],["🎯","8"],["✅","3"],["👥","2"]].map(([l,v])=>(
-          <div key={l} style={{background:"#E8F5E9",borderRadius:20,padding:"3px 9px",fontSize:11,border:"1px solid #C8E6C9",display:"flex",gap:4}}><span>{l}</span><strong>{v}pt</strong></div>
+          <div key={l} style={{background:"rgba(34,197,94,0.1)",borderRadius:20,padding:"3px 9px",fontSize:11,border:"1px solid rgba(34,197,94,0.2)",display:"flex",gap:4,color:T.text}}><span>{l}</span><strong>{v}pt</strong></div>
         ))}
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -935,14 +940,14 @@ function Leaderboard({ranked,scores,player,data}) {
           const isMe=name===player;
           const payout=i<3?`💰 $${payouts[i]}`:"";
           return (
-            <div key={name} style={{background:i===0?"linear-gradient(135deg,#FFF9C4,#FFFDE7)":"#fff",borderRadius:14,padding:"14px 16px",border:`2px solid ${isMe?"#4CAF50":i===0?"#FFD700":"transparent"}`,boxShadow:"0 2px 8px rgba(0,0,0,.07)"}}>
+            <div key={name} style={{background:i===0?"linear-gradient(135deg,rgba(240,192,64,0.15),rgba(249,168,37,0.08))":T.bgCard,borderRadius:14,padding:"14px 16px",border:`1px solid ${isMe?"#22c55e":i===0?"rgba(240,192,64,0.4)":T.border}`,boxShadow:i===0?"0 4px 20px rgba(240,192,64,0.15)":"0 2px 8px rgba(0,0,0,.2)"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <div style={{fontSize:24,width:32,textAlign:"center"}}>{medals[i]||`#${i+1}`}</div>
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
                     <div style={{width:10,height:10,borderRadius:"50%",background:playerColor(name),flexShrink:0}}/>
-                    <span style={{fontWeight:900,fontSize:15}}>{name}</span>
-                    {isMe&&<span style={{background:"#4CAF50",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}}>you</span>}
+                    <span style={{fontWeight:800,fontSize:15,color:"#f1f5f9"}}>{name}</span>
+                    {isMe&&<span style={{background:"rgba(34,197,94,0.2)",color:"#22c55e",border:"1px solid rgba(34,197,94,0.3)",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}}>you</span>}
                     {payout&&<span style={{marginLeft:"auto",fontSize:12,fontWeight:700,color:"#E65100"}}>{payout}</span>}
                   </div>
                   <div style={{display:"flex",gap:8,fontSize:11,color:"#888"}}>
@@ -951,7 +956,7 @@ function Leaderboard({ranked,scores,player,data}) {
                     <span style={{marginLeft:"auto",fontWeight:700,color:"#555"}}>🎯 {s.exactCount} exact · ✅ {s.resultCount} correct</span>
                   </div>
                 </div>
-                <div style={{fontWeight:900,fontSize:24,color:"#1A5C2E",minWidth:44,textAlign:"right"}}>{s.total}</div>
+                <div style={{fontWeight:900,fontSize:24,background:"linear-gradient(90deg,#f0c040,#f9a825)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",minWidth:44,textAlign:"right"}}>{s.total}</div>
               </div>
               {/* progress bar */}
               <div style={{marginTop:8,background:"#f0f0f0",borderRadius:999,height:5,overflow:"hidden"}}>
@@ -961,7 +966,7 @@ function Leaderboard({ranked,scores,player,data}) {
           );
         })}
       </div>
-      <p style={{color:"#999",fontSize:12,marginTop:12,textAlign:"center"}}>Prize pool: ${pot} · 60/30/10% split · Auto-updated live</p>
+      <p style={{color:"#475569",fontSize:12,marginTop:12,textAlign:"center"}}>Prize pool: ${pot} · 60/30/10% split · Auto-updated live</p>
     </div>
   );
 }
@@ -1200,7 +1205,7 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
               const va=predA[f.key]||"—", vb=predB[f.key]||"—";
               const match=va!=="—"&&vb!=="—"&&va===vb;
               return (
-                <div key={f.key} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid #f5f5f5",fontSize:13}}>
+                <div key={f.key} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:13}}>
                   <span style={{minWidth:20}}>{f.label.split(" ")[0]}</span>
                   <span style={{flex:1,fontWeight:700,color:playerColor(h2hA),textAlign:"right"}}>{va}</span>
                   <span style={{background:match?"#E8F5E9":"#f5f5f5",borderRadius:6,padding:"2px 8px",fontSize:11,color:match?"#1B5E20":"#999",fontWeight:600}}>{match?"🤝 Same":"vs"}</span>
@@ -1221,7 +1226,7 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
               </div>
               <div style={{maxHeight:200,overflowY:"auto"}}>
                 {matchComparison.slice(0,20).map(({m,actual,predAScore,predBScore,ptsA,ptsB})=>(
-                  <div key={m.id} style={{display:"flex",gap:6,padding:"5px 0",borderBottom:"1px solid #f5f5f5",fontSize:11,alignItems:"center"}}>
+                  <div key={m.id} style={{display:"flex",gap:6,padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:11,alignItems:"center"}}>
                     <span style={{color:"#888",minWidth:28}}>#{m.id}</span>
                     <span style={{flex:1,color:ptsA>ptsB?playerColor(h2hA):"#999",fontWeight:ptsA>ptsB?700:400}}>{predAScore||"—"} ({ptsA}pt)</span>
                     <span style={{color:"#1B5E20",fontWeight:700,background:"#E8F5E9",padding:"1px 5px",borderRadius:4}}>{actual}</span>
@@ -1280,7 +1285,7 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
           const correct=actual&&form[f.key]===actual;
           const isTextInput = f.key==="goldenBoot"||f.key==="goldenBall"||f.key==="goldenGlove";
           return (
-            <div key={f.key} style={{background:"#fff",borderRadius:14,padding:14,boxShadow:"0 2px 8px rgba(0,0,0,.07)",borderLeft:`4px solid ${f.color}`}}>
+            <div key={f.key} style={{background:T.bgCard,border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:14,boxShadow:"0 2px 12px rgba(0,0,0,.2)",borderLeft:`4px solid ${f.color}`}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <div style={{fontWeight:800,fontSize:14}}>{f.label}</div>
                 <div style={{background:f.color,color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700}}>{f.pts} pts</div>
@@ -1380,7 +1385,7 @@ function MatchCard({m, player, data, setPred, tz}) {
   }
 
   return (
-    <div style={{background:"#fff",borderRadius:12,padding:"12px 14px",boxShadow:"0 1px 4px rgba(0,0,0,.07)"}}>
+    <div style={{background:T.bgCard,borderRadius:12,padding:"12px 14px",boxShadow:"0 2px 12px rgba(0,0,0,.2)",border:"1px solid rgba(255,255,255,0.06)"}}>
       {/* Header row */}
       <div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:4,flexWrap:"wrap"}}>
         <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0}}>{m.stage}</div>
@@ -1443,10 +1448,10 @@ function GroupsTab() {
       <p style={{color:"#888",fontSize:12,marginBottom:14}}>48 teams · 12 groups · Top 2 + 8 best 3rd-place advance to R32</p>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
         {Object.entries(GROUPS).map(([grp,teams])=>(
-          <div key={grp} style={{borderRadius:12,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>
+          <div key={grp} style={{borderRadius:12,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,.35)",border:"1px solid rgba(255,255,255,0.07)"}}>
             <div style={{background:GC[grp],color:"#fff",fontWeight:900,fontSize:13,padding:"8px 12px",letterSpacing:1}}>GROUP {grp}</div>
             {teams.map((t,i)=>(
-              <div key={t} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:i%2===0?"#F1F8E9":"#fff",fontSize:13}}>
+              <div key={t} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:i%2===0?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.02)",fontSize:13,color:T.text}}>
                 <span style={{color:"#aaa",fontSize:11,width:14}}>{i+1}</span>
                 <span style={{flex:1,fontWeight:600}}>{t}</span>
                 <span style={{fontSize:10,color:"#aaa",fontWeight:600}}>{CONF[t]||""}</span>
@@ -1481,7 +1486,7 @@ function ScheduleTab({data,playerTZ}) {
           const { home, away } = getMatchTeams(m, data);
           const isPlaceholder = m.id >= 73 && (!data?.knockoutTeams?.[m.id]);
           return (
-            <div key={m.id} style={{background:"#fff",borderRadius:10,padding:"10px 12px",boxShadow:"0 1px 3px rgba(0,0,0,.06)",display:"flex",gap:8,alignItems:"center"}}>
+            <div key={m.id} style={{background:T.bgCard,borderRadius:10,padding:"10px 12px",border:"1px solid rgba(255,255,255,0.06)",display:"flex",gap:8,alignItems:"center"}}>
               <div style={{background:sc,color:"#fff",borderRadius:6,padding:"3px 7px",fontSize:11,fontWeight:700,minWidth:26,textAlign:"center"}}>{m.id}</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13,color:isPlaceholder?"#aaa":"#000"}}>
@@ -1554,7 +1559,7 @@ function RulesTab() {
           <span style={{flex:1,fontWeight:600}}>{c}</span><span style={{color:"#888",minWidth:60}}>{v}</span><span style={{fontWeight:800,color:"#1B5E20",minWidth:50,textAlign:"right"}}>{m} pts</span>
         </div>
       ))}
-      <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:900,fontSize:15,textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 962 pts</div>
+      <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:800,fontSize:15,color:"#f1f5f9",textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 962 pts</div>
     </>},
     {icon:"🌍",title:"Timezone Setup",color:"#01579B",body:<>
       <p style={S.rp}>All match times are stored in <strong>Eastern Time (ET)</strong> — the host country time zone. You can set your own timezone so all dates and times display correctly for your location.</p>
@@ -1576,7 +1581,7 @@ function RulesTab() {
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>📖 Rules & Regulations</h2>
-      <div style={{background:"linear-gradient(135deg,#1A5C2E,#0D3B1E)",borderRadius:14,padding:"16px 20px",marginBottom:16,color:"#fff"}}>
+      <div style={{background:"linear-gradient(135deg,#1a2535,#0d1520)",border:"1px solid rgba(240,192,64,0.15)",borderRadius:14,padding:"16px 20px",marginBottom:16,color:"#fff"}}>
         <div style={{fontWeight:900,fontSize:20,color:"#FFD700",fontFamily:"Georgia,serif"}}>⚽ FIFA WC 2026 Betting Tracker</div>
         <div style={{fontSize:12,color:"#A5D6A7",marginTop:4}}>June 11 – July 19, 2026 · USA, Canada, Mexico</div>
         <div style={{display:"flex",gap:12,marginTop:12,flexWrap:"wrap"}}>
@@ -1590,17 +1595,17 @@ function RulesTab() {
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
         {sections.map((s,i)=>(
-          <div key={i} style={{borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.08)"}}>
-            <button style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:"#fff",border:"none",borderLeft:`4px solid ${s.color}`,cursor:"pointer",textAlign:"left"}} onClick={()=>setOpen(open===i?-1:i)}>
+          <div key={i} style={{borderRadius:12,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.25)",border:"1px solid rgba(255,255,255,0.07)"}}>
+            <button style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:T.bgCard,border:"none",borderLeft:`4px solid ${s.color}`,cursor:"pointer",textAlign:"left"}} onClick={()=>setOpen(open===i?-1:i)}>
               <span style={{fontSize:18}}>{s.icon}</span>
-              <span style={{fontWeight:800,fontSize:14,flex:1,color:"#1a1a1a"}}>{s.title}</span>
+              <span style={{fontWeight:800,fontSize:14,flex:1,color:T.text}}>{s.title}</span>
               <span style={{color:s.color,fontWeight:900,fontSize:18}}>{open===i?"−":"+"}</span>
             </button>
-            {open===i&&<div style={{background:"#fafafa",padding:"14px 16px",borderTop:"1px solid #eee"}}>{s.body}</div>}
+            {open===i&&<div style={{background:T.bgCard2,padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.06)"}}>{s.body}</div>}
           </div>
         ))}
       </div>
-      <div style={{textAlign:"center",color:"#1A5C2E",fontWeight:700,fontSize:14,padding:"16px",background:"#E8F5E9",borderRadius:12,marginTop:12,border:"2px solid #A5D6A7"}}>
+      <div style={{textAlign:"center",color:"#f0c040",fontWeight:700,fontSize:14,padding:"16px",background:"rgba(240,192,64,0.08)",borderRadius:12,marginTop:12,border:"1px solid rgba(240,192,64,0.2)"}}>
         Good luck — may the best Villa win! 🏆⚽
       </div>
     </div>
@@ -1640,8 +1645,8 @@ function AdminResults({data,update,toast_}) {
       <h2 style={S.h2}>⚙️ Enter Results</h2>
 
       {/* AUTO SYNC CARD */}
-      <div style={{...S.card,border:"2px solid #1B5E20",background:"#F1F8E9"}}>
-        <div style={{...S.blockTitle,color:"#1B5E20"}}>🔄 Auto-Sync from API-Football</div>
+      <div style={{...S.card,border:"1px solid rgba(34,197,94,0.3)",background:"rgba(34,197,94,0.05)"}}>
+        <div style={{...S.blockTitle,color:"#22c55e"}}>🔄 Auto-Sync from API-Football</div>
         <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
           Pulls all completed match results, group standings and top scorer automatically from <strong>api-football.com</strong>. Run this after each matchday — takes about 5 seconds.
         </p>
@@ -1764,7 +1769,7 @@ function PlayerProfile({player,data,update,toast_}) {
       {/* Account info */}
       <div style={S.card}>
         <div style={S.blockTitle}>Account</div>
-        <div style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #f5f5f5",marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",marginBottom:16}}>
           <div style={{width:44,height:44,borderRadius:"50%",background:playerColor(player),display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:18}}>
             {player[0]?.toUpperCase()}
           </div>
@@ -1882,7 +1887,7 @@ function PlayerQualifiers({player,data,update,toast_}) {
           const pick0=getT(grp,0), pick1=getT(grp,1);
           const q0=getQ(grp,0), q1=getQ(grp,1);
           return (
-            <div key={grp} style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+            <div key={grp} style={{background:T.bgCard,borderRadius:12,overflow:"hidden",boxShadow:"0 4px 16px rgba(0,0,0,.3)",border:"1px solid rgba(255,255,255,0.07)"}}>
               <div style={{background:GC[grp],color:"#fff",fontWeight:900,fontSize:13,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <span>GROUP {grp}</span>
                 {(pick0||pick1) && (
@@ -1949,7 +1954,7 @@ function AdminQualifiers({data,update,toast_}) {
           <div style={S.blockTitle}>Group {grp} — {teams.join(", ")}</div>
           {players.length===0 && <div style={{color:"#bbb",fontSize:12,padding:"8px 0"}}>No players yet</div>}
           {players.map(p=>(
-            <div key={p} style={{display:"grid",gridTemplateColumns:"80px 1fr 70px 1fr 70px",gap:6,alignItems:"center",padding:"5px 0",borderBottom:"1px solid #f5f5f5",fontSize:12}}>
+            <div key={p} style={{display:"grid",gridTemplateColumns:"80px 1fr 70px 1fr 70px",gap:6,alignItems:"center",padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:12}}>
               <span style={{fontWeight:700,fontSize:12}}>{p}</span>
               {[0,1].map(slot=>(
                 <div key={slot} style={{display:"contents"}}>
@@ -1983,7 +1988,7 @@ function AdminDeductions({data,update,toast_,ranked}) {
       <div style={S.card}>
         <div style={S.blockTitle}>Current Stage: <strong>{stageInfo.stage}</strong> · Penalty: <strong style={{color:"#ef5350"}}>{stageInfo.pts}pts</strong></div>
         {players.map(p=>(
-          <div key={p} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid #f5f5f5",flexWrap:"wrap"}}>
+          <div key={p} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",flexWrap:"wrap"}}>
             <span style={{fontWeight:700,minWidth:70}}>{p}</span>
             <span style={{color:"#ef5350",fontWeight:700,minWidth:50}}>−{data.deductions[p]||0}pts</span>
             <button style={{...S.btn,background:"#E65100",padding:"6px 12px",fontSize:12,width:"auto"}} onClick={()=>apply(p,stageInfo.pts)}>−{stageInfo.pts}pts</button>
@@ -1994,7 +1999,7 @@ function AdminDeductions({data,update,toast_,ranked}) {
       <div style={S.card}>
         <div style={S.blockTitle}>📝 Change Log</div>
         {data.changeLog.length===0?<p style={{color:"#bbb",fontSize:13}}>No changes yet.</p>:data.changeLog.map((l,i)=>(
-          <div key={i} style={{display:"flex",gap:8,padding:"6px 0",borderBottom:"1px solid #f5f5f5",fontSize:12}}>
+          <div key={i} style={{display:"flex",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:12}}>
             <span style={{color:"#888"}}>{l.date}</span>
             <span style={{fontWeight:700}}>{l.player}</span>
             <span style={{flex:1,color:"#555"}}>{l.what}</span>
@@ -2005,7 +2010,7 @@ function AdminDeductions({data,update,toast_,ranked}) {
       <div style={S.card}>
         <div style={S.blockTitle}>📉 Deduction Scale</div>
         {DEDUCTIONS.map(d=>(
-          <div key={d.stage} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #f5f5f5",fontSize:13}}>
+          <div key={d.stage} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:13}}>
             <span style={{fontWeight:600}}>{d.stage}</span>
             <span style={{color:d.pts===0?"#1B5E20":"#ef5350",fontWeight:700}}>{d.label}</span>
           </div>
@@ -2135,7 +2140,7 @@ function AdminSettings({data,update,toast_}) {
       <div style={S.card}>
         <div style={S.blockTitle}>📊 Data Snapshot</div>
         {statRows.map(([l,v])=>(
-          <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid #f5f5f5",fontSize:13}}>
+          <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:13}}>
             <span style={{color:"#555"}}>{l}</span>
             <span style={{fontWeight:800,color:"#1A5C2E"}}>{v}</span>
           </div>
@@ -2160,7 +2165,7 @@ function AdminSettings({data,update,toast_}) {
             const qualCount = Object.keys(data.groupQualifiers).filter(k=>k.startsWith(p+"_")).length;
             const isConfirming = confirmDelete === p;
             return (
-              <div key={p} style={{padding:"10px 0",borderBottom:"1px solid #f5f5f5"}}>
+              <div key={p} style={{padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:playerColor(p),flexShrink:0}}/>
                   <div style={{flex:1}}>
@@ -2311,7 +2316,7 @@ function Toast({toast}) {
   return (
     <div style={{
       position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",
-      background:toast.type==="error"?"#C62828":"#1B5E20",
+      background:toast.type==="error"?"rgba(239,68,68,0.95)":"rgba(34,197,94,0.95)",
       color:"#fff",padding:"12px 22px",borderRadius:12,fontWeight:700,
       fontSize:14,zIndex:9999,boxShadow:"0 4px 20px rgba(0,0,0,.25)",
       whiteSpace:"nowrap",
@@ -2319,22 +2324,75 @@ function Toast({toast}) {
   );
 }
 
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+// Dark stadium theme with gold accents — lightweight CSS only, no external assets
+const T = {
+  bg:       "#0f1923",   // deep navy — stadium night
+  bgCard:   "#1a2535",   // slightly lighter card bg
+  bgCard2:  "#212f42",   // hover / alternate card
+  border:   "rgba(255,255,255,0.08)",
+  gold:     "#f0c040",
+  goldDim:  "#b8923a",
+  green:    "#22c55e",   // accent green
+  greenDim: "#15803d",
+  red:      "#ef4444",
+  blue:     "#3b82f6",
+  text:     "#f1f5f9",
+  textDim:  "#94a3b8",
+  textMute: "#475569",
+  sidebar:  "#111c2a",
+};
+
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const S = {
-  header:{background:"#1A5C2E",color:"#fff",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,flexShrink:0},
+  header:{
+    background:"linear-gradient(90deg,#111c2a 0%,#1a2535 100%)",
+    borderBottom:"1px solid rgba(240,192,64,0.2)",
+    color:"#fff",padding:"10px 16px",display:"flex",alignItems:"center",
+    justifyContent:"space-between",position:"sticky",top:0,zIndex:100,flexShrink:0,
+  },
   sec:{},
-  h2:{fontSize:20,fontWeight:900,color:"#1A5C2E",marginBottom:12,marginTop:0},
-  card:{background:"#fff",borderRadius:14,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,.07)",marginBottom:14},
-  blockTitle:{fontWeight:800,fontSize:14,color:"#1A5C2E",marginBottom:10,paddingBottom:8,borderBottom:"2px solid #E8F5E9"},
-  empty:{color:"#bbb",textAlign:"center",padding:24,fontSize:14},
-  loginWrap:{minHeight:"100vh",background:"linear-gradient(135deg,#1A5C2E,#0D3B1E)",display:"flex",alignItems:"center",justifyContent:"center",padding:16},
-  loginCard:{background:"#fff",borderRadius:20,padding:"32px 28px",maxWidth:380,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,.3)"},
-  lbl:{fontSize:11,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:.8,display:"block",marginBottom:4},
-  inp:{border:"2px solid #e0e0e0",borderRadius:10,padding:"10px 14px",fontSize:14,outline:"none",fontFamily:"inherit",width:"100%",boxSizing:"border-box"},
-  btn:{background:"#1B5E20",color:"#fff",border:"none",borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"},
-  sel:{width:"100%",border:"2px solid #e0e0e0",borderRadius:8,padding:"8px 10px",fontSize:13,outline:"none",fontFamily:"inherit",cursor:"pointer",boxSizing:"border-box"},
-  chip:{background:"#fff",border:"2px solid #e0e0e0",borderRadius:20,padding:"4px 12px",fontSize:11,cursor:"pointer",fontWeight:600,color:"#555",whiteSpace:"nowrap"},
-  chipActive:{background:"#1B5E20",color:"#FFD700",borderColor:"#1B5E20"},
-  rp:{fontSize:13,color:"#333",lineHeight:1.7,marginBottom:10},
-  ri:{display:"flex",gap:10,alignItems:"flex-start",background:"#fff",borderRadius:8,padding:"8px 10px",border:"1px solid #eee",marginBottom:6},
+  h2:{
+    fontSize:22,fontWeight:900,
+    background:"linear-gradient(90deg,#f0c040,#f9a825)",
+    WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+    backgroundClip:"text",
+    marginBottom:14,marginTop:0,letterSpacing:"-0.5px",
+  },
+  card:{
+    background:T.bgCard,borderRadius:16,padding:16,marginBottom:14,
+    border:"1px solid rgba(255,255,255,0.07)",
+    boxShadow:"0 4px 24px rgba(0,0,0,0.3)",
+  },
+  blockTitle:{
+    fontWeight:800,fontSize:13,color:T.gold,marginBottom:10,paddingBottom:8,
+    borderBottom:"1px solid rgba(240,192,64,0.2)",
+    textTransform:"uppercase",letterSpacing:"0.8px",
+  },
+  empty:{color:T.textMute,textAlign:"center",padding:24,fontSize:14},
+  loginWrap:{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:16},
+  loginCard:{background:"rgba(15,10,30,0.82)",borderRadius:24,padding:"32px 28px",maxWidth:380,width:"100%",boxShadow:"0 24px 60px rgba(0,0,0,.6)",border:"1px solid rgba(255,255,255,0.12)"},
+  lbl:{fontSize:11,fontWeight:700,color:T.textDim,textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4},
+  inp:{
+    border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"11px 14px",
+    fontSize:14,outline:"none",fontFamily:"inherit",width:"100%",boxSizing:"border-box",
+    background:"rgba(255,255,255,0.07)",color:"#fff",
+  },
+  btn:{
+    background:"linear-gradient(135deg,#22c55e,#15803d)",color:"#fff",border:"none",
+    borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",
+    boxShadow:"0 4px 12px rgba(34,197,94,0.3)",
+  },
+  sel:{
+    width:"100%",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,
+    padding:"9px 10px",fontSize:13,outline:"none",fontFamily:"inherit",cursor:"pointer",
+    boxSizing:"border-box",background:T.bgCard2,color:T.text,
+  },
+  chip:{
+    background:T.bgCard2,border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,
+    padding:"4px 12px",fontSize:11,cursor:"pointer",fontWeight:600,color:T.textDim,whiteSpace:"nowrap",
+  },
+  chipActive:{background:"linear-gradient(135deg,#f0c040,#f9a825)",color:"#111",borderColor:"#f0c040",fontWeight:800},
+  rp:{fontSize:13,color:T.textDim,lineHeight:1.7,marginBottom:10},
+  ri:{display:"flex",gap:10,alignItems:"flex-start",background:T.bgCard2,borderRadius:8,padding:"8px 10px",border:"1px solid rgba(255,255,255,0.06)",marginBottom:6},
 };
