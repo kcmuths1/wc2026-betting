@@ -202,13 +202,23 @@ function convertToTZ(etDate, etTime, tzId) {
 function getPlayerTZ(data, player) {
   return data?.playerTimezones?.[player] || "ET";
 }
+
+// Resolve real team names for a match (knockout rounds show placeholders until known)
+function getMatchTeams(m, data) {
+  if (m.id <= 72) return { home: m.home, away: m.away }; // group stage always fixed
+  const kt = data?.knockoutTeams?.[m.id];
+  return {
+    home: kt?.home || m.home,
+    away: kt?.away || m.away,
+  };
+}
 const fmtDate = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",weekday:"short"});
 const fmtShort = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
 const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.length] || "#888";
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // Storage handled by Firebase (see firebase.js)
-const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{}, playerTimezones:{} });
+const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{}, playerTimezones:{}, knockoutTeams:{} });
 
 // ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────────
 function useCountdown(etDate, etTime) {
@@ -871,11 +881,12 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
           <div style={S.blockTitle}>📅 Upcoming Matches <span style={{fontSize:11,color:"#888",fontWeight:400}}>({TIMEZONES.find(t=>t.id===tz)?.abbr||"ET"})</span></div>
           {upcoming.slice(0,5).map(m=>{
             const c = convertToTZ(m.date, m.time, tz);
+            const { home, away } = getMatchTeams(m, data);
             return (
               <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid #f5f5f5"}}>
                 <div style={{background:STAGE_COLORS[m.stage]||"#333",color:"#fff",borderRadius:6,padding:"2px 6px",fontSize:10,fontWeight:700,minWidth:24,textAlign:"center"}}>{m.id}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13}}>{m.home} <span style={{color:"#ccc",fontWeight:400}}>vs</span> {m.away}</div>
+                  <div style={{fontWeight:700,fontSize:13}}>{home} <span style={{color:"#ccc",fontWeight:400}}>vs</span> {away}</div>
                   <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time}{c.dayShift!==0&&" ⚠️"}</div>
                 </div>
                 <div style={{fontSize:10,color:"#888",textAlign:"right"}}>{m.city}</div>
@@ -1342,6 +1353,7 @@ function MatchCard({m, player, data, setPred, tz}) {
   const pts      = actual&&saved ? calcMatchPts(actual,saved) : null;
   const sc       = STAGE_COLORS[m.stage]||"#333";
   const c        = convertToTZ(m.date, m.time, tz);
+  const { home, away } = getMatchTeams(m, data); // ← real names once known
 
   // Local input state so indicator reacts live as user types
   const [localVal, setLocalVal] = useState(saved);
@@ -1349,7 +1361,7 @@ function MatchCard({m, player, data, setPred, tz}) {
   // Keep in sync if saved value changes externally (e.g. another device)
   useEffect(()=>{ setLocalVal(saved); }, [saved]);
 
-  const predResult = !locked2 && localVal ? getPredictionResult(localVal, m.home, m.away) : null;
+  const predResult = !locked2 && localVal ? getPredictionResult(localVal, home, away) : null;
 
   function handleChange(e) {
     const val = e.target.value;
@@ -1381,9 +1393,9 @@ function MatchCard({m, player, data, setPred, tz}) {
 
       {/* Teams */}
       <div style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0"}}>
-        <span style={{fontWeight:800,fontSize:14,flex:1}}>{m.home}</span>
+        <span style={{fontWeight:800,fontSize:14,flex:1}}>{home}</span>
         <span style={{color:"#ccc",fontSize:12}}>vs</span>
-        <span style={{fontWeight:800,fontSize:14,flex:1,textAlign:"right"}}>{m.away}</span>
+        <span style={{fontWeight:800,fontSize:14,flex:1,textAlign:"right"}}>{away}</span>
       </div>
 
       {/* Input row */}
@@ -1466,11 +1478,16 @@ function ScheduleTab({data,playerTZ}) {
           const sc=STAGE_COLORS[m.stage]||"#333";
           const locked2=isLocked(m);
           const c=convertToTZ(m.date,m.time,tz);
+          const { home, away } = getMatchTeams(m, data);
+          const isPlaceholder = m.id >= 73 && (!data?.knockoutTeams?.[m.id]);
           return (
             <div key={m.id} style={{background:"#fff",borderRadius:10,padding:"10px 12px",boxShadow:"0 1px 3px rgba(0,0,0,.06)",display:"flex",gap:8,alignItems:"center"}}>
               <div style={{background:sc,color:"#fff",borderRadius:6,padding:"3px 7px",fontSize:11,fontWeight:700,minWidth:26,textAlign:"center"}}>{m.id}</div>
               <div style={{flex:1}}>
-                <div style={{fontWeight:700,fontSize:13}}>{m.home} <span style={{opacity:.4}}>vs</span> {m.away}</div>
+                <div style={{fontWeight:700,fontSize:13,color:isPlaceholder?"#aaa":"#000"}}>
+                  {home} <span style={{opacity:.4}}>vs</span> {away}
+                  {isPlaceholder&&<span style={{fontSize:10,color:"#aaa",marginLeft:6}}>(TBD)</span>}
+                </div>
                 <div style={{fontSize:11,color:"#888",marginBottom:1}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&<span style={{color:"#E65100"}}> ⚠️ date shifted</span>}</div>
                 {r&&<div style={{fontSize:11,color:"#1B5E20",fontWeight:700,marginTop:2}}>{r.score} · {r.winner}</div>}
               </div>
@@ -1596,10 +1613,71 @@ function AdminResults({data,update,toast_}) {
   const [form,setForm]=useState({});
   const [tForm,setTForm]=useState({_winner:data.matchActuals._winner||"",_runnerUp:data.matchActuals._runnerUp||"",_thirdPlace:data.matchActuals._thirdPlace||"",_goldenBoot:data.matchActuals._goldenBoot||"",_goldenBall:data.matchActuals._goldenBall||"",_goldenGlove:data.matchActuals._goldenGlove||""});
   const filtered=filter==="All"?MATCHES:MATCHES.filter(m=>m.stage===filter);
+  const [syncing,setSyncing]=useState(false);
+  const [syncLog,setSyncLog]=useState(null);
+
+  async function handleSync() {
+    setSyncing(true);
+    setSyncLog(null);
+    try {
+      const { syncAllResults } = await import("./api-football.js");
+      const { newData, summary } = await syncAllResults(data);
+      update(() => newData);
+      setSyncLog(summary);
+      const msg = summary.errors.length > 0
+        ? `Sync done with ${summary.errors.length} error(s)`
+        : `✅ Synced! ${summary.matchesUpdated} matches, ${summary.qualifiersUpdated} qualifiers updated`;
+      toast_(msg, summary.errors.length > 0 ? "error" : "success");
+    } catch (e) {
+      toast_(`Sync failed: ${e.message}`, "error");
+      setSyncLog({ errors: [e.message], matchesUpdated:0, qualifiersUpdated:0 });
+    }
+    setSyncing(false);
+  }
 
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>⚙️ Enter Results</h2>
+
+      {/* AUTO SYNC CARD */}
+      <div style={{...S.card,border:"2px solid #1B5E20",background:"#F1F8E9"}}>
+        <div style={{...S.blockTitle,color:"#1B5E20"}}>🔄 Auto-Sync from API-Football</div>
+        <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
+          Pulls all completed match results, group standings and top scorer automatically from <strong>api-football.com</strong>. Run this after each matchday — takes about 5 seconds.
+        </p>
+        <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#1B5E20",marginBottom:12}}>
+          💡 <strong>What gets synced automatically:</strong> All finished match scores · Group qualifier results · Golden Boot (top scorer)<br/>
+          📝 <strong>Still manual:</strong> Golden Ball · Golden Glove · Knockout round qualifiers (after R32+)
+        </div>
+        <button
+          style={{...S.btn,background:syncing?"#aaa":"#1B5E20",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontSize:15}}
+          onClick={handleSync}
+          disabled={syncing}
+        >
+          {syncing ? "⏳ Syncing…" : "🔄 Sync Results Now"}
+        </button>
+
+        {/* Sync log */}
+        {syncLog && (
+          <div style={{marginTop:12,fontSize:12}}>
+            <div style={{fontWeight:700,color:"#1B5E20",marginBottom:4}}>Last sync results:</div>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:6}}>
+              {[
+                [`⚽ ${syncLog.matchesUpdated} matches updated`,"#1B5E20"],
+                [`🏟️ ${syncLog.knockoutNamesUpdated||0} knockout slots filled`,"#4A148C"],
+                [`👥 ${syncLog.qualifiersUpdated} qualifiers marked`,"#01579B"],
+                ...(syncLog.topScorer?[[`🥾 Boot: ${syncLog.topScorer.name} (${syncLog.topScorer.goals}g)`,"#E65100"]]:[] ),
+                ...(syncLog.awards?.winner?[[`🏆 Winner: ${syncLog.awards.winner}`,"#B71C1C"]]:[] ),
+              ].map(([l,c])=>(
+                <span key={l} style={{background:"#fff",borderRadius:6,padding:"2px 8px",color:c,fontWeight:600,border:`1px solid ${c}30`}}>{l}</span>
+              ))}
+            </div>
+            {syncLog.errors?.length > 0 && syncLog.errors.map((e,i)=>(
+              <div key={i} style={{color:"#C62828",background:"#FFEBEE",borderRadius:6,padding:"4px 8px",marginBottom:3}}>⚠️ {e}</div>
+            ))}
+          </div>
+        )}
+      </div>
       <div style={S.card}>
         <div style={S.blockTitle}>🏅 Tournament Awards</div>
         {[{k:"_winner",l:"🏆 Winner"},{k:"_runnerUp",l:"🥈 Runner-Up"},{k:"_thirdPlace",l:"🥉 3rd Place"},{k:"_goldenBoot",l:"⚽ Golden Boot"},{k:"_goldenBall",l:"🎖 Golden Ball"},{k:"_goldenGlove",l:"🧤 Golden Glove"}].map(f=>{
