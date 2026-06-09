@@ -210,7 +210,58 @@ const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.le
 // Storage handled by Firebase (see firebase.js)
 const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{}, playerTimezones:{} });
 
-// ─── TIME BADGES COMPONENT ────────────────────────────────────────────────────
+// ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────────
+function useCountdown(etDate, etTime) {
+  const getSecsLeft = () => {
+    const [h,m] = etTime.split(":").map(Number);
+    const kickoff = new Date(`${etDate}T${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:00`);
+    return Math.max(0, Math.floor((kickoff - new Date()) / 1000));
+  };
+  const [secs, setSecs] = useState(getSecsLeft);
+  useEffect(() => {
+    if (secs <= 0) return;
+    const t = setInterval(() => setSecs(getSecsLeft()), 1000);
+    return () => clearInterval(t);
+  }, [etDate, etTime]);
+  return secs;
+}
+
+function Countdown({etDate, etTime}) {
+  const secs = useCountdown(etDate, etTime);
+  if (secs <= 0) return null; // already locked, shown elsewhere
+
+  const d  = Math.floor(secs / 86400);
+  const h  = Math.floor((secs % 86400) / 3600);
+  const m  = Math.floor((secs % 3600) / 60);
+  const s  = secs % 60;
+
+  const urgent  = secs < 48 * 3600;   // under 48h  → red
+  const warning = secs < 7  * 86400;  // under 7d   → amber
+
+  const color  = urgent ? "#C62828" : warning ? "#E65100" : "#1B5E20";
+  const bgCol  = urgent ? "#FFEBEE" : warning ? "#FFF3E0" : "#E8F5E9";
+  const label  = urgent ? "⚡ Closes soon!" : warning ? "⏳ Bet closes in" : "🕐 Bet closes in";
+
+  const parts = d > 0
+    ? `${d}d ${h}h ${String(m).padStart(2,"0")}m`
+    : `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+
+  return (
+    <div style={{display:"inline-flex",alignItems:"center",gap:5,background:bgCol,borderRadius:6,padding:"3px 8px",marginTop:4}}>
+      <span style={{fontSize:10,color,fontWeight:600}}>{label}</span>
+      <span style={{fontSize:12,color,fontWeight:900,fontFamily:"monospace"}}>{parts}</span>
+    </div>
+  );
+}
+
+// ─── PREDICTION RESULT HELPER ─────────────────────────────────────────────────
+function getPredictionResult(score, home, away) {
+  const p = parseScore(score);
+  if (!p) return null;
+  if (p.h === p.a) return { label:"Draw 🤝", detail:"You've predicted a draw", color:"#37474F", bg:"#ECEFF1" };
+  if (p.h > p.a)  return { label:`${home} to win`, detail:`You've predicted ${home} win ${p.h}–${p.a}`, color:"#1B5E20", bg:"#E8F5E9" };
+  return           { label:`${away} to win`, detail:`You've predicted ${away} win ${p.a}–${p.h}`, color:"#01579B", bg:"#E3F2FD" };
+}
 function TimeBadges({time, inline=false}) {
   const tz = fmtAllTimes(time);
   if (inline) {
@@ -708,6 +759,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
             </div>
             <div style={{marginTop:8,fontSize:12,opacity:.8}}>📅 {converted.date} · ⏰ {converted.time} · 📍 {motd.city}</div>
             {converted.dayShift!==0&&<div style={{fontSize:10,opacity:.6,marginTop:2}}>⚠️ Date shifted from ET</div>}
+            <div style={{marginTop:6}}><Countdown etDate={motd.date} etTime={motd.time}/></div>
             <div style={{marginTop:4,fontSize:11,opacity:.6}}>{motd.venue}</div>
           </div>
         );
@@ -1179,23 +1231,35 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter,player
           const pts=actual&&pred?calcMatchPts(actual,pred):null;
           const sc=STAGE_COLORS[m.stage]||"#333";
           const c=convertToTZ(m.date,m.time,tz);
+          const predResult = !locked2 && pred ? getPredictionResult(pred, m.home, m.away) : null;
           return (
             <div key={m.id} style={{background:"#fff",borderRadius:12,padding:"12px 14px",boxShadow:"0 1px 4px rgba(0,0,0,.07)"}}>
-              <div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:6,flexWrap:"wrap"}}>
+              {/* Header row */}
+              <div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:4,flexWrap:"wrap"}}>
                 <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0}}>{m.stage}</div>
                 <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&" ⚠️"}</div>
                 {locked2&&!actual&&<div style={{marginLeft:"auto",fontSize:10,color:"#aaa"}}>🔒 Locked</div>}
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+
+              {/* Countdown — only for unlocked matches */}
+              {!locked2 && <Countdown etDate={m.date} etTime={m.time}/>}
+
+              {/* Teams */}
+              <div style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0"}}>
                 <span style={{fontWeight:800,fontSize:14,flex:1}}>{m.home}</span>
                 <span style={{color:"#ccc",fontSize:12}}>vs</span>
                 <span style={{fontWeight:800,fontSize:14,flex:1,textAlign:"right"}}>{m.away}</span>
               </div>
+
+              {/* Input row */}
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,color:"#888",marginBottom:3}}>Your prediction</div>
-                  <input style={{border:`2px solid ${locked2?"#e0e0e0":"#4CAF50"}`,borderRadius:8,padding:"7px 10px",fontSize:14,fontWeight:700,width:70,textAlign:"center",outline:"none",background:locked2?"#f9f9f9":"#fff",color:locked2?"#aaa":"#000"}}
-                    placeholder="2-1" value={pred} readOnly={locked2} onChange={e=>!locked2&&setPred(m.id,e.target.value)}/>
+                  <input
+                    style={{border:`2px solid ${locked2?"#e0e0e0":pred?"#4CAF50":"#e0e0e0"}`,borderRadius:8,padding:"7px 10px",fontSize:14,fontWeight:700,width:70,textAlign:"center",outline:"none",background:locked2?"#f9f9f9":"#fff",color:locked2?"#aaa":"#000"}}
+                    placeholder="2-1" value={pred} readOnly={locked2}
+                    onChange={e=>!locked2&&setPred(m.id,e.target.value)}
+                  />
                 </div>
                 {actual&&(
                   <div style={{textAlign:"center"}}>
@@ -1209,6 +1273,14 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter,player
                   </div>
                 )}
               </div>
+
+              {/* Prediction result indicator */}
+              {predResult && (
+                <div style={{marginTop:8,background:predResult.bg,borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontWeight:800,fontSize:12,color:predResult.color}}>{predResult.label}</span>
+                  <span style={{fontSize:11,color:"#666"}}>— {predResult.detail}</span>
+                </div>
+              )}
             </div>
           );
         })}
