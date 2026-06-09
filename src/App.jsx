@@ -1155,14 +1155,20 @@ function AdminQualifiers({data,update,toast_}) {
     <div style={S.sec}>
       <h2 style={S.h2}>✅ Group Qualifiers</h2>
       <p style={{color:"#888",fontSize:12,marginBottom:12}}>2 pts per correct pick. Mark YES/NO after Jun 27.</p>
+      {players.length===0 && (
+        <div style={{...S.card,textAlign:"center",color:"#888",padding:24}}>
+          No players have joined yet. Players will appear here once they log in and enter predictions.
+        </div>
+      )}
       {Object.entries(GROUPS).map(([grp,teams])=>(
         <div key={grp} style={{...S.card,marginBottom:10}}>
           <div style={S.blockTitle}>Group {grp} — {teams.join(", ")}</div>
+          {players.length===0 && <div style={{color:"#bbb",fontSize:12,padding:"8px 0"}}>No players yet</div>}
           {players.map(p=>(
             <div key={p} style={{display:"grid",gridTemplateColumns:"80px 1fr 70px 1fr 70px",gap:6,alignItems:"center",padding:"5px 0",borderBottom:"1px solid #f5f5f5",fontSize:12}}>
               <span style={{fontWeight:700,fontSize:12}}>{p}</span>
               {[0,1].map(slot=>(
-                <React.Fragment key={slot}>
+                <div key={slot} style={{display:"contents"}}>
                   <select style={{...S.sel,fontSize:11,padding:"4px 6px"}} value={getT(p,grp,slot)} onChange={e=>setTeam(p,grp,slot,e.target.value)}>
                     <option value="">—</option>{teams.map(t=><option key={t} value={t}>{t}</option>)}
                   </select>
@@ -1171,7 +1177,7 @@ function AdminQualifiers({data,update,toast_}) {
                     onChange={e=>setQual(p,grp,slot,e.target.value===""?null:e.target.value==="YES")}>
                     <option value="">—</option><option value="YES">✅ YES</option><option value="NO">❌ NO</option>
                   </select>
-                </React.Fragment>
+                </div>
               ))}
             </div>
           ))}
