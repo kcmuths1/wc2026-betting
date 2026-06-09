@@ -1400,16 +1400,21 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter,player
   const setPred=(matchId,val)=>{ update(d=>{d.matchPredictions[`${player}_${matchId}`]=val;return d;}); };
   const totalPts=MATCHES.reduce((sum,m)=>{
     const actual=data.matchActuals[m.id]?.score, pred=data.matchPredictions[`${player}_${m.id}`];
-    return sum+(actual&&pred?calcMatchPts(actual,pred):0);
+    const {home,away}=getMatchTeams(m,data); const r=data.teamRankings||{};
+    return sum+(actual&&pred?calcMatchPts(actual,pred,r[home],r[away]):0);
   },0);
-  const exactCount=MATCHES.filter(m=>{ const a=data.matchActuals[m.id]?.score,p=data.matchPredictions[`${player}_${m.id}`]; return a&&p&&calcMatchPts(a,p)===POINTS.exactScore; }).length;
+  const exactCount=MATCHES.filter(m=>{
+    const a=data.matchActuals[m.id]?.score,p=data.matchPredictions[`${player}_${m.id}`];
+    const {home,away}=getMatchTeams(m,data); const r=data.teamRankings||{};
+    return a&&p&&calcMatchPts(a,p,r[home],r[away])>=POINTS.exactScore;
+  }).length;
 
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>⚽ Match Predictions <span style={{fontSize:13,color:"#64748b",fontWeight:400}}>({tzLabel})</span></h2>
-      <div style={{display:"flex",gap:8,marginBottom:12,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+      <div style={{display:"flex",gap:8,marginBottom:12,background:T.bgCard,borderRadius:12,padding:12,border:"1px solid rgba(255,255,255,0.07)"}}>
         {[["⚽ Total Pts",totalPts],["🎯 Exact Scores",exactCount],["📝 Predicted",MATCHES.filter(m=>data.matchPredictions[`${player}_${m.id}`]).length]].map(([l,v])=>(
-          <div key={l} style={{flex:1,textAlign:"center"}}><div style={{fontWeight:900,fontSize:20,color:"#22c55e"}}>{v}</div><div style={{fontSize:10,color:"#64748b"}}>{l}</div></div>
+          <div key={l} style={{flex:1,textAlign:"center"}}><div style={{fontWeight:900,fontSize:20,color:T.gold}}>{v}</div><div style={{fontSize:10,color:T.textDim}}>{l}</div></div>
         ))}
       </div>
       <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>
