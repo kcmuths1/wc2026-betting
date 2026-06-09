@@ -1224,72 +1224,102 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter,player
         {stages.map(s=><button key={s} style={{...S.chip,...(matchFilter===s?S.chipActive:{})}} onClick={()=>setMatchFilter(s)}>{s}</button>)}
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {filtered.map(m=>{
-          const locked2=isLocked(m);
-          const actual=data.matchActuals[m.id]?.score;
-          const pred=data.matchPredictions[`${player}_${m.id}`]||"";
-          const pts=actual&&pred?calcMatchPts(actual,pred):null;
-          const sc=STAGE_COLORS[m.stage]||"#333";
-          const c=convertToTZ(m.date,m.time,tz);
-          const predResult = !locked2 && pred ? getPredictionResult(pred, m.home, m.away) : null;
-          return (
-            <div key={m.id} style={{background:"#fff",borderRadius:12,padding:"12px 14px",boxShadow:"0 1px 4px rgba(0,0,0,.07)"}}>
-              {/* Header row */}
-              <div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:4,flexWrap:"wrap"}}>
-                <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0}}>{m.stage}</div>
-                <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&" ⚠️"}</div>
-                {locked2&&!actual&&<div style={{marginLeft:"auto",fontSize:10,color:"#aaa"}}>🔒 Locked</div>}
-              </div>
-
-              {/* Countdown — only for unlocked matches */}
-              {!locked2 && <Countdown etDate={m.date} etTime={m.time}/>}
-
-              {/* Teams */}
-              <div style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0"}}>
-                <span style={{fontWeight:800,fontSize:14,flex:1}}>{m.home}</span>
-                <span style={{color:"#ccc",fontSize:12}}>vs</span>
-                <span style={{fontWeight:800,fontSize:14,flex:1,textAlign:"right"}}>{m.away}</span>
-              </div>
-
-              {/* Input row */}
-              <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:10,color:"#888",marginBottom:3}}>Your prediction</div>
-                  <input
-                    style={{border:`2px solid ${locked2?"#e0e0e0":pred?"#4CAF50":"#e0e0e0"}`,borderRadius:8,padding:"7px 10px",fontSize:14,fontWeight:700,width:70,textAlign:"center",outline:"none",background:locked2?"#f9f9f9":"#fff",color:locked2?"#aaa":"#000"}}
-                    placeholder="2-1" value={pred} readOnly={locked2}
-                    onChange={e=>!locked2&&setPred(m.id,e.target.value)}
-                  />
-                </div>
-                {actual&&(
-                  <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:10,color:"#888",marginBottom:3}}>Result</div>
-                    <div style={{fontWeight:900,fontSize:16,color:"#1B5E20",background:"#E8F5E9",padding:"4px 10px",borderRadius:8}}>{actual}</div>
-                  </div>
-                )}
-                {pts!==null&&(
-                  <div style={{background:pts>0?"#1B5E20":"#f5f5f5",color:pts>0?"#fff":"#aaa",borderRadius:8,padding:"6px 10px",fontWeight:900,fontSize:13,textAlign:"center"}}>
-                    {pts>0?`+${pts}`:"-"}<div style={{fontSize:9}}>pts</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Prediction result indicator */}
-              {predResult && (
-                <div style={{marginTop:8,background:predResult.bg,borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontWeight:800,fontSize:12,color:predResult.color}}>{predResult.label}</span>
-                  <span style={{fontSize:11,color:"#666"}}>— {predResult.detail}</span>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {filtered.map(m=>(
+          <MatchCard key={m.id} m={m} player={player} data={data} setPred={setPred} tz={tz}/>
+        ))}
       </div>
     </div>
   );
 }
 
-// ─── GROUPS TAB ───────────────────────────────────────────────────────────────
+// ─── MATCH CARD (extracted so it can have its own local input state) ──────────
+function MatchCard({m, player, data, setPred, tz}) {
+  const locked2  = isLocked(m);
+  const actual   = data.matchActuals[m.id]?.score;
+  const saved    = data.matchPredictions[`${player}_${m.id}`]||"";
+  const pts      = actual&&saved ? calcMatchPts(actual,saved) : null;
+  const sc       = STAGE_COLORS[m.stage]||"#333";
+  const c        = convertToTZ(m.date, m.time, tz);
+
+  // Local input state so indicator reacts live as user types
+  const [localVal, setLocalVal] = useState(saved);
+
+  // Keep in sync if saved value changes externally (e.g. another device)
+  useEffect(()=>{ setLocalVal(saved); }, [saved]);
+
+  const predResult = !locked2 && localVal ? getPredictionResult(localVal, m.home, m.away) : null;
+
+  function handleChange(e) {
+    const val = e.target.value;
+    setLocalVal(val);
+    // Only save to Firebase once it looks like a complete score (X-Y format)
+    if (/^\d+-\d+$/.test(val.trim())) {
+      setPred(m.id, val.trim());
+    } else if (val === "") {
+      setPred(m.id, "");
+    }
+  }
+
+  function handleBlur() {
+    // Save whatever is in the input on blur, even partial
+    if (localVal !== saved) setPred(m.id, localVal);
+  }
+
+  return (
+    <div style={{background:"#fff",borderRadius:12,padding:"12px 14px",boxShadow:"0 1px 4px rgba(0,0,0,.07)"}}>
+      {/* Header row */}
+      <div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:4,flexWrap:"wrap"}}>
+        <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0}}>{m.stage}</div>
+        <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&" ⚠️"}</div>
+        {locked2&&!actual&&<div style={{marginLeft:"auto",fontSize:10,color:"#aaa"}}>🔒 Locked</div>}
+      </div>
+
+      {/* Countdown */}
+      {!locked2 && <Countdown etDate={m.date} etTime={m.time}/>}
+
+      {/* Teams */}
+      <div style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0"}}>
+        <span style={{fontWeight:800,fontSize:14,flex:1}}>{m.home}</span>
+        <span style={{color:"#ccc",fontSize:12}}>vs</span>
+        <span style={{fontWeight:800,fontSize:14,flex:1,textAlign:"right"}}>{m.away}</span>
+      </div>
+
+      {/* Input row */}
+      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:10,color:"#888",marginBottom:3}}>Your prediction</div>
+          <input
+            style={{border:`2px solid ${locked2?"#e0e0e0":localVal?"#4CAF50":"#e0e0e0"}`,borderRadius:8,padding:"7px 10px",fontSize:14,fontWeight:700,width:70,textAlign:"center",outline:"none",background:locked2?"#f9f9f9":"#fff",color:locked2?"#aaa":"#000"}}
+            placeholder="2-1"
+            value={localVal}
+            readOnly={locked2}
+            onChange={handleChange}
+            onBlur={handleBlur}
+          />
+        </div>
+        {actual&&(
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:10,color:"#888",marginBottom:3}}>Result</div>
+            <div style={{fontWeight:900,fontSize:16,color:"#1B5E20",background:"#E8F5E9",padding:"4px 10px",borderRadius:8}}>{actual}</div>
+          </div>
+        )}
+        {pts!==null&&(
+          <div style={{background:pts>0?"#1B5E20":"#f5f5f5",color:pts>0?"#fff":"#aaa",borderRadius:8,padding:"6px 10px",fontWeight:900,fontSize:13,textAlign:"center"}}>
+            {pts>0?`+${pts}`:"-"}<div style={{fontSize:9}}>pts</div>
+          </div>
+        )}
+      </div>
+
+      {/* Prediction result indicator — live as you type */}
+      {predResult&&(
+        <div style={{marginTop:8,background:predResult.bg,borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontWeight:800,fontSize:12,color:predResult.color}}>{predResult.label}</span>
+          <span style={{fontSize:11,color:"#666"}}>— {predResult.detail}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 function GroupsTab() {
   const GC={A:"#B71C1C",B:"#1A237E",C:"#1B5E20",D:"#E65100",E:"#4A148C",F:"#006064",G:"#880E4F",H:"#F57F17",I:"#01579B",J:"#33691E",K:"#37474F",L:"#6A1B9A"};
   const CONF={"Mexico":"CONCACAF","South Korea":"AFC","South Africa":"CAF","Czechia":"UEFA","Canada":"CONCACAF","Bosnia & Herz.":"UEFA","Qatar":"AFC","Switzerland":"UEFA","Brazil":"CONMEBOL","Morocco":"CAF","Haiti":"CONCACAF","Scotland":"UEFA","USA":"CONCACAF","Paraguay":"CONMEBOL","Australia":"AFC","Türkiye":"UEFA","Germany":"UEFA","Curaçao":"CONCACAF","Ivory Coast":"CAF","Ecuador":"CONMEBOL","Netherlands":"UEFA","Japan":"AFC","Sweden":"UEFA","Tunisia":"CAF","Belgium":"UEFA","Egypt":"CAF","Iran":"AFC","New Zealand":"OFC","Spain":"UEFA","Cape Verde":"CAF","Saudi Arabia":"AFC","Uruguay":"CONMEBOL","France":"UEFA","Senegal":"CAF","Iraq":"AFC","Norway":"UEFA","Argentina":"CONMEBOL","Algeria":"CAF","Austria":"UEFA","Jordan":"AFC","Portugal":"UEFA","DR Congo":"CAF","Uzbekistan":"AFC","Colombia":"CONMEBOL","England":"UEFA","Croatia":"UEFA","Ghana":"CAF","Panama":"CONCACAF"};
