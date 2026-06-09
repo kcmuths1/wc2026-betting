@@ -26,6 +26,47 @@ const STAGE_COLORS = {
   "Quarterfinal":"#880E4F","Semifinal":"#E65100","Third-Place":"#37474F","Final":"#B71C1C"
 };
 const POINTS = { winner:20,runnerUp:12,thirdPlace:8,goldenBoot:15,goldenBall:15,goldenGlove:12,exactScore:8,correctResult:3,groupQualifier:2 };
+
+// ─── UPSET BONUS SYSTEM ───────────────────────────────────────────────────────
+const UPSET_TIERS = [
+  { maxGap:5,   bonus:0,  label:"Even",       color:"#475569" },
+  { maxGap:10,  bonus:1,  label:"+1 upset",   color:"#64748b" },
+  { maxGap:15,  bonus:3,  label:"+3 upset",   color:"#f0c040" },
+  { maxGap:25,  bonus:5,  label:"+5 upset",   color:"#fb923c" },
+  { maxGap:50,  bonus:8,  label:"+8 upset",   color:"#f97316" },
+  { maxGap:75,  bonus:15, label:"+15 UPSET",  color:"#ef4444" },
+  { maxGap:100, bonus:25, label:"+25 UPSET!", color:"#dc2626" },
+  { maxGap:Infinity, bonus:50, label:"+50 🔥 GIANT KILLER!", color:"#b91c1c" },
+];
+
+function getUpsetBonus(rankHome, rankAway, actualScore) {
+  if (!rankHome || !rankAway || !actualScore) return 0;
+  const a = parseScore(actualScore);
+  if (!a) return 0;
+  const homeWon = a.h > a.a, awayWon = a.a > a.h;
+  if (!homeWon && !awayWon) return 0; // draw — no upset possible
+  // Upset = lower-ranked (higher number) team wins
+  const upset = (homeWon && rankHome > rankAway) || (awayWon && rankAway > rankHome);
+  if (!upset) return 0;
+  const gap = Math.abs(rankHome - rankAway);
+  for (const tier of UPSET_TIERS) { if (gap <= tier.maxGap) return tier.bonus; }
+  return 50;
+}
+
+function getUpsetTier(rankHome, rankAway) {
+  if (!rankHome || !rankAway) return null;
+  const gap = Math.abs(rankHome - rankAway);
+  for (const tier of UPSET_TIERS) { if (gap <= tier.maxGap) return tier; }
+  return UPSET_TIERS[UPSET_TIERS.length - 1];
+}
+
+function getRankTier(rank) {
+  if (!rank) return { color:"#475569", label:"Unranked" };
+  if (rank <= 10)  return { color:"#ef4444", label:"🔴 Top 10" };
+  if (rank <= 25)  return { color:"#f97316", label:"🟠 Top 25" };
+  if (rank <= 50)  return { color:"#f0c040", label:"🟡 Top 50" };
+  return                  { color:"#64748b", label:"⚫ Rank "+rank };
+}
 const DEDUCTIONS = [
   {stage:"Pre-Tournament",before:"2026-06-11",pts:0,label:"Free"},
   {stage:"Group Stage",before:"2026-06-28",pts:5,label:"−5 pts"},
@@ -145,7 +186,14 @@ const MATCHES = [
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const parseScore = s => { if(!s||!s.includes("-"))return null; const[a,b]=s.split("-"); const h=parseInt(a),aw=parseInt(b); return(isNaN(h)||isNaN(aw))?null:{h,a:aw}; };
 const getResult = s => !s?null:s.h>s.a?"H":s.h<s.a?"A":"D";
-const calcMatchPts = (actual,pred) => { const a=parseScore(actual),p=parseScore(pred); if(!a||!p)return 0; if(a.h===p.h&&a.a===p.a)return POINTS.exactScore; if(getResult(a)===getResult(p))return POINTS.correctResult; return 0; };
+const calcMatchPts = (actual, pred, rankHome, rankAway) => {
+  const a=parseScore(actual), p=parseScore(pred);
+  if(!a||!p) return 0;
+  const basePts = a.h===p.h&&a.a===p.a ? POINTS.exactScore : getResult(a)===getResult(p) ? POINTS.correctResult : 0;
+  if(basePts===0) return 0;
+  const upsetBonus = getUpsetBonus(rankHome, rankAway, actual);
+  return basePts + upsetBonus;
+};
 const isLocked = m => { const[h,mn]=m.time.split(":").map(Number); return new Date()>=new Date(`${m.date}T${String(h).padStart(2,"0")}:${String(mn).padStart(2,"0")}:00`); };
 const getCurrentStage = () => { const now=new Date(); for(const d of DEDUCTIONS){if(now<new Date(d.before))return d;} return DEDUCTIONS[DEDUCTIONS.length-1]; };
 const fmt12 = t => { const[h,m]=t.split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")}${h>=12?"PM":"AM"} ET`; };
@@ -218,7 +266,7 @@ const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.le
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // Storage handled by Firebase (see firebase.js)
-const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{}, playerTimezones:{}, knockoutTeams:{} });
+const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{}, playerTimezones:{}, knockoutTeams:{}, teamRankings:{} });
 
 // ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────────
 function useCountdown(etDate, etTime) {
@@ -268,9 +316,16 @@ function Countdown({etDate, etTime}) {
 function getPredictionResult(score, home, away) {
   const p = parseScore(score);
   if (!p) return null;
-  if (p.h === p.a) return { label:"Draw 🤝", detail:"You've predicted a draw", color:"#94a3b8", bg:"#ECEFF1" };
-  if (p.h > p.a)  return { label:`${home} to win`, detail:`You've predicted ${home} win ${p.h}–${p.a}`, color:"#22c55e", bg:"#E8F5E9" };
-  return           { label:`${away} to win`, detail:`You've predicted ${away} win ${p.a}–${p.h}`, color:"#60a5fa", bg:"#E3F2FD" };
+  if (p.h === p.a) {
+    const isNilNil = p.h === 0;
+    const isOneOne = p.h === 1;
+    const drawMsg = isNilNil || isOneOne
+      ? "Draw — Haramball for the win! 🦍"
+      : "You've predicted a draw";
+    return { label:"Draw 🤝", detail:drawMsg, color:"#94a3b8", bg:"rgba(148,163,184,0.12)" };
+  }
+  if (p.h > p.a) return { label:`${home} to win`, detail:`You've predicted ${home} win ${p.h}–${p.a}`, color:"#22c55e", bg:"rgba(34,197,94,0.1)" };
+  return { label:`${away} to win`, detail:`You've predicted ${away} win ${p.a}–${p.h}`, color:"#60a5fa", bg:"rgba(96,165,250,0.1)" };
 }
 function TimeBadges({time, inline=false}) {
   const tz = fmtAllTimes(time);
@@ -313,7 +368,9 @@ function calcScores(data) {
     if(pred.goldenGlove&&data.matchActuals._goldenGlove&&pred.goldenGlove===data.matchActuals._goldenGlove) predPts+=POINTS.goldenGlove;
     MATCHES.forEach(m => {
       const key=`${p}_${m.id}`, predicted=data.matchPredictions[key], actual=data.matchActuals[m.id]?.score;
-      if(actual&&predicted){ const pts=calcMatchPts(actual,predicted); matchPts+=pts; if(pts===POINTS.exactScore)exactCount++; else if(pts===POINTS.correctResult)resultCount++; }
+      const rankings = data.teamRankings||{};
+      const { home, away } = getMatchTeams(m, data);
+      if(actual&&predicted){ const pts=calcMatchPts(actual,predicted,rankings[home],rankings[away]); matchPts+=pts; if(pts>=POINTS.exactScore)exactCount++; else if(pts===POINTS.correctResult)resultCount++; }
     });
     Object.keys(GROUPS).forEach(grp => { for(let s=0;s<2;s++){ const q=data.groupQualifiers[`${p}_${grp}_${s}`]; if(q?.qualified===true)qualPts+=POINTS.groupQualifier; }});
     const ded=data.deductions[p]||0;
@@ -1372,15 +1429,15 @@ function MatchCard({m, player, data, setPred, tz}) {
   const locked2  = isLocked(m);
   const actual   = data.matchActuals[m.id]?.score;
   const saved    = data.matchPredictions[`${player}_${m.id}`]||"";
-  const pts      = actual&&saved ? calcMatchPts(actual,saved) : null;
+  const rankings = data.teamRankings||{};
   const sc       = STAGE_COLORS[m.stage]||"#333";
   const c        = convertToTZ(m.date, m.time, tz);
-  const { home, away } = getMatchTeams(m, data); // ← real names once known
+  const { home, away } = getMatchTeams(m, data);
+  const rankHome = rankings[home], rankAway = rankings[away];
+  const upsetTier = rankHome && rankAway ? getUpsetTier(rankHome, rankAway) : null;
+  const pts      = actual&&saved ? calcMatchPts(actual, saved, rankHome, rankAway) : null;
 
-  // Local input state so indicator reacts live as user types
   const [localVal, setLocalVal] = useState(saved);
-
-  // Keep in sync if saved value changes externally (e.g. another device)
   useEffect(()=>{ setLocalVal(saved); }, [saved]);
 
   const predResult = !locked2 && localVal ? getPredictionResult(localVal, home, away) : null;
@@ -1388,18 +1445,10 @@ function MatchCard({m, player, data, setPred, tz}) {
   function handleChange(e) {
     const val = e.target.value;
     setLocalVal(val);
-    // Only save to Firebase once it looks like a complete score (X-Y format)
-    if (/^\d+-\d+$/.test(val.trim())) {
-      setPred(m.id, val.trim());
-    } else if (val === "") {
-      setPred(m.id, "");
-    }
+    if (/^\d+-\d+$/.test(val.trim())) setPred(m.id, val.trim());
+    else if (val === "") setPred(m.id, "");
   }
-
-  function handleBlur() {
-    // Save whatever is in the input on blur, even partial
-    if (localVal !== saved) setPred(m.id, localVal);
-  }
+  function handleBlur() { if (localVal !== saved) setPred(m.id, localVal); }
 
   return (
     <div style={{background:T.bgCard,borderRadius:12,padding:"12px 14px",boxShadow:"0 2px 12px rgba(0,0,0,.2)",border:"1px solid rgba(255,255,255,0.06)"}}>
@@ -1413,49 +1462,73 @@ function MatchCard({m, player, data, setPred, tz}) {
       {/* Countdown */}
       {!locked2 && <Countdown etDate={m.date} etTime={m.time}/>}
 
-      {/* Teams */}
+      {/* Teams with rankings */}
       <div style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0"}}>
-        <span style={{fontWeight:800,fontSize:14,flex:1}}>{home}</span>
-        <span style={{color:"#ccc",fontSize:12}}>vs</span>
-        <span style={{fontWeight:800,fontSize:14,flex:1,textAlign:"right"}}>{away}</span>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:14,color:T.text}}>{home}</div>
+          {rankHome && (
+            <div style={{display:"flex",alignItems:"center",gap:4,marginTop:2}}>
+              <span style={{width:6,height:6,borderRadius:"50%",background:getRankTier(rankHome).color,flexShrink:0,display:"inline-block"}}/>
+              <span style={{fontSize:10,color:getRankTier(rankHome).color,fontWeight:700}}>#{rankHome}</span>
+            </div>
+          )}
+        </div>
+        <span style={{color:T.textMute,fontSize:12,fontWeight:700}}>VS</span>
+        <div style={{flex:1,textAlign:"right"}}>
+          <div style={{fontWeight:800,fontSize:14,color:T.text}}>{away}</div>
+          {rankAway && (
+            <div style={{display:"flex",alignItems:"center",gap:4,marginTop:2,justifyContent:"flex-end"}}>
+              <span style={{fontSize:10,color:getRankTier(rankAway).color,fontWeight:700}}>#{rankAway}</span>
+              <span style={{width:6,height:6,borderRadius:"50%",background:getRankTier(rankAway).color,flexShrink:0,display:"inline-block"}}/>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Upset bonus indicator */}
+      {upsetTier && upsetTier.bonus > 0 && (
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,background:`${upsetTier.color}15`,border:`1px solid ${upsetTier.color}40`,borderRadius:6,padding:"4px 8px"}}>
+          <span style={{fontSize:10,color:upsetTier.color,fontWeight:700}}>⚡ Upset bonus available:</span>
+          <span style={{fontSize:10,color:upsetTier.color,fontWeight:900}}>{upsetTier.label}</span>
+          <span style={{fontSize:10,color:T.textMute,marginLeft:"auto"}}>if lower-ranked team wins</span>
+        </div>
+      )}
 
       {/* Input row */}
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
         <div style={{flex:1}}>
           <div style={{fontSize:10,color:"#64748b",marginBottom:3}}>Your prediction</div>
           <input
-            style={{border:`2px solid ${locked2?"#e0e0e0":localVal?"#4CAF50":"#e0e0e0"}`,borderRadius:8,padding:"7px 10px",fontSize:14,fontWeight:700,width:70,textAlign:"center",outline:"none",background:locked2?"#f9f9f9":"#fff",color:locked2?"#aaa":"#000"}}
-            placeholder="2-1"
-            value={localVal}
-            readOnly={locked2}
-            onChange={handleChange}
-            onBlur={handleBlur}
+            style={{border:`2px solid ${locked2?T.border:localVal?T.green:"rgba(255,255,255,0.15)"}`,borderRadius:8,padding:"7px 10px",fontSize:14,fontWeight:700,width:70,textAlign:"center",outline:"none",background:T.bgCard2,color:locked2?T.textMute:T.text}}
+            placeholder="2-1" value={localVal} readOnly={locked2}
+            onChange={handleChange} onBlur={handleBlur}
           />
         </div>
         {actual&&(
           <div style={{textAlign:"center"}}>
             <div style={{fontSize:10,color:"#64748b",marginBottom:3}}>Result</div>
-            <div style={{fontWeight:900,fontSize:16,color:"#22c55e",background:"rgba(34,197,94,0.15)",padding:"4px 10px",borderRadius:8,color:"#22c55e"}}>{actual}</div>
+            <div style={{fontWeight:900,fontSize:16,color:"#22c55e",background:"rgba(34,197,94,0.15)",padding:"4px 10px",borderRadius:8}}>{actual}</div>
           </div>
         )}
         {pts!==null&&(
-          <div style={{background:pts>0?"#1B5E20":"#f5f5f5",color:pts>0?"#fff":"#aaa",borderRadius:8,padding:"6px 10px",fontWeight:900,fontSize:13,textAlign:"center"}}>
+          <div style={{background:pts>0?"linear-gradient(135deg,#22c55e,#15803d)":"rgba(255,255,255,0.05)",color:pts>0?"#fff":T.textMute,borderRadius:8,padding:"6px 10px",fontWeight:900,fontSize:13,textAlign:"center",minWidth:44}}>
             {pts>0?`+${pts}`:"-"}<div style={{fontSize:9}}>pts</div>
           </div>
         )}
       </div>
 
-      {/* Prediction result indicator — live as you type */}
+      {/* Prediction result indicator */}
       {predResult&&(
-        <div style={{marginTop:8,background:predResult.bg,borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <div style={{marginTop:8,background:predResult.bg,borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",border:`1px solid ${predResult.color}30`}}>
           <span style={{fontWeight:800,fontSize:12,color:predResult.color}}>{predResult.label}</span>
-          <span style={{fontSize:11,color:"#94a3b8"}}>— {predResult.detail}</span>
+          <span style={{fontSize:11,color:T.textDim}}>— {predResult.detail}</span>
         </div>
       )}
     </div>
   );
 }
+
+
 function GroupsTab() {
   const GC={A:"#B71C1C",B:"#1A237E",C:"#1B5E20",D:"#E65100",E:"#4A148C",F:"#006064",G:"#880E4F",H:"#F57F17",I:"#01579B",J:"#33691E",K:"#37474F",L:"#6A1B9A"};
   const CONF={"Mexico":"CONCACAF","South Korea":"AFC","South Africa":"CAF","Czechia":"UEFA","Canada":"CONCACAF","Bosnia & Herz.":"UEFA","Qatar":"AFC","Switzerland":"UEFA","Brazil":"CONMEBOL","Morocco":"CAF","Haiti":"CONCACAF","Scotland":"UEFA","USA":"CONCACAF","Paraguay":"CONMEBOL","Australia":"AFC","Türkiye":"UEFA","Germany":"UEFA","Curaçao":"CONCACAF","Ivory Coast":"CAF","Ecuador":"CONMEBOL","Netherlands":"UEFA","Japan":"AFC","Sweden":"UEFA","Tunisia":"CAF","Belgium":"UEFA","Egypt":"CAF","Iran":"AFC","New Zealand":"OFC","Spain":"UEFA","Cape Verde":"CAF","Saudi Arabia":"AFC","Uruguay":"CONMEBOL","France":"UEFA","Senegal":"CAF","Iraq":"AFC","Norway":"UEFA","Argentina":"CONMEBOL","Algeria":"CAF","Austria":"UEFA","Jordan":"AFC","Portugal":"UEFA","DR Congo":"CAF","Uzbekistan":"AFC","Colombia":"CONMEBOL","England":"UEFA","Croatia":"UEFA","Ghana":"CAF","Panama":"CONCACAF"};
@@ -1563,6 +1636,24 @@ function RulesTab() {
         </div>
       ))}
       <div style={{background:"#FFF3E0",borderRadius:8,padding:"8px 12px",fontSize:12,marginTop:6}}>⚠️ Deduction applied per change event, logged by admin. Change freely before tournament starts.</div>
+    </>},
+    {icon:"⚡",title:"Upset Bonus Points",color:"#ef4444",body:<>
+      <p style={S.rp}>When a <strong style={{color:T.text}}>lower-ranked team wins</strong>, players who correctly predicted that upset earn bonus points on top of the normal match points. Applies to match predictions only — not tournament prizes.</p>
+      <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
+        {UPSET_TIERS.map((tier,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",background:"rgba(255,255,255,0.03)",borderRadius:8,border:`1px solid ${tier.color}25`}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:tier.color,flexShrink:0}}/>
+            <span style={{flex:1,fontSize:12,color:T.textDim}}>
+              Rank gap {i===0?"0–5":i===1?"6–10":i===2?"11–15":i===3?"16–25":i===4?"26–50":i===5?"51–75":i===6?"76–100":"100+"}
+            </span>
+            <span style={{fontWeight:800,color:tier.color,fontSize:13}}>{tier.bonus===0?"No bonus":"+"+tier.bonus+" pts"}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#fca5a5"}}>
+        ⚡ Example: If you predict a rank #80 team to beat a rank #5 team (gap = 75), and they win, you get <strong>8 pts exact/3 pts result + 25 bonus pts!</strong><br/>
+        Ranking badges (🔴 Top 10 · 🟠 Top 25 · 🟡 Top 50 · ⚫ Others) are shown on each match card.
+      </div>
     </>},
     {icon:"🤝",title:"Tiebreakers",color:"#33691E",body:<>
       <p style={S.rp}>If total points are tied at the end:</p>
@@ -1679,7 +1770,27 @@ function AdminResults({data,update,toast_}) {
           {syncing ? "⏳ Syncing…" : "🔄 Sync Results Now"}
         </button>
 
-        {/* Sync log */}
+        {/* Rankings sync */}
+        <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.07)"}}>
+          <div style={{fontSize:12,color:T.textDim,marginBottom:6}}>
+            🏅 <strong style={{color:T.text}}>FIFA Rankings</strong> — sync once before the tournament to enable upset bonuses on match cards.
+            {data.teamRankings&&Object.keys(data.teamRankings).length>0&&
+              <span style={{color:T.green,marginLeft:6}}>✅ {Object.keys(data.teamRankings).length} teams loaded</span>}
+          </div>
+          <button
+            style={{...S.btn,background:"rgba(240,192,64,0.12)",color:T.gold,border:"1px solid rgba(240,192,64,0.25)",fontSize:13,padding:"9px 14px",boxShadow:"none"}}
+            onClick={async()=>{
+              try {
+                const {fetchFIFARankings}=await import("./api-football.js");
+                const r=await fetchFIFARankings();
+                update(d=>{d.teamRankings=r;return d;});
+                toast_(`✅ ${Object.keys(r).length} team rankings loaded`);
+              } catch(e){ toast_("Rankings sync failed: "+e.message,"error"); }
+            }}
+          >
+            🏅 Sync FIFA Rankings
+          </button>
+        </div>
         {syncLog && (
           <div style={{marginTop:12,fontSize:12}}>
             <div style={{fontWeight:700,color:"#22c55e",marginBottom:4}}>Last sync results:</div>
@@ -2413,17 +2524,40 @@ function OnboardingModal({player,onClose,onGoTo,tournamentStarted}) {
       action:{label:"Go to Group Qualifiers →",tab:"qualifiers"},
     },
     {
+      icon:"🌍",
+      title:"Step 3 — Set Your Timezone",
+      subtitle:"All match times will show in your local time across the whole app.",
+      color:T.blue,
+      body:(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{background:T.bgCard2,borderRadius:10,padding:"12px 14px",fontSize:13,color:T.textDim,lineHeight:1.7}}>
+            The app defaults to <strong style={{color:T.text}}>Eastern Time (ET)</strong>. If you're in the UK, India, UAE or anywhere else, set your timezone so match dates and times show correctly for you — especially for late-night games that cross midnight.
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {[["🇮🇳","IST","India — +9.5h from ET"],["🇬🇧","BST","UK Summer — +5h from ET"],["🇩🇪🇫🇷","CEST","Central Europe — +6h from ET"],["🇦🇪","GST","UAE/Gulf — +8h from ET"],["🇸🇬🇲🇾","SGT","Singapore/Malaysia — +12h from ET"]].map(([fl,tz,note])=>(
+              <div key={tz} style={{display:"flex",alignItems:"center",gap:8,background:T.bgCard2,borderRadius:8,padding:"7px 10px"}}>
+                <span style={{fontSize:16}}>{fl}</span>
+                <span style={{fontWeight:700,color:T.text,minWidth:40}}>{tz}</span>
+                <span style={{fontSize:11,color:T.textDim}}>{note}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+      action:{label:"Go to Profile → Timezone →",tab:"profile"},
+    },
+    {
       icon:"✅",
       title:"You're all set!",
-      subtitle:"One last thing — make sure to enter match predictions before each kickoff.",
+      subtitle:"One last thing — enter match predictions before each kickoff.",
       color:T.green,
       body:(
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{background:T.bgCard2,borderRadius:10,padding:"12px 14px",fontSize:13,color:T.textDim,lineHeight:1.7}}>
-            For each match you can predict the exact score — <strong style={{color:T.gold}}>8 pts</strong> for exact, <strong style={{color:T.gold}}>3 pts</strong> for correct result (W/D/L). Predictions lock at kickoff time.
+            For each match predict the exact score — <strong style={{color:T.gold}}>8 pts</strong> for exact, <strong style={{color:T.gold}}>3 pts</strong> for correct result. Predictions lock at kickoff. And watch for <strong style={{color:"#ef4444"}}>⚡ upset bonuses</strong> — predicting a lower-ranked team to win earns you extra points!
           </div>
           <div style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:10,padding:"12px 14px",fontSize:13,color:T.green,lineHeight:1.7}}>
-            🏆 <strong>Good luck!</strong> May the best Villa win!<br/>
+            🏆 <strong>Good luck!</strong> May the best Villa win! 🟣<br/>
             <span style={{fontSize:11,color:T.textDim}}>Check the 📖 Rules tab anytime for the full scoring guide.</span>
           </div>
         </div>
