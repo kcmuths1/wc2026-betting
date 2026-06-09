@@ -168,7 +168,7 @@ const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.le
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // Storage handled by Firebase (see firebase.js)
-const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140 });
+const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{} });
 
 // ─── TIME BADGES COMPONENT ────────────────────────────────────────────────────
 function TimeBadges({time, inline=false}) {
@@ -267,7 +267,7 @@ export default function App() {
   // Recent results (last 5 with actual scores)
   const recentResults = [...MATCHES].reverse().filter(m=>data.matchActuals[m.id]?.score).slice(0,5);
 
-  if(!player&&!isAdmin) return <Login playerInput={playerInput} setPlayerInput={setPlayerInput} adminInput={adminInput} setAdminInput={setAdminInput} setPlayer={setPlayer} setIsAdmin={setIsAdmin} toast_={toast_} toast={toast} data={data}/>;
+  if(!player&&!isAdmin) return <Login playerInput={playerInput} setPlayerInput={setPlayerInput} adminInput={adminInput} setAdminInput={setAdminInput} setPlayer={setPlayer} setIsAdmin={setIsAdmin} toast_={toast_} toast={toast} data={data} update={update}/>;
 
   const playerTabs=[
     {id:"home",label:"🏠",tip:"Home"},
@@ -280,6 +280,7 @@ export default function App() {
     {id:"h2h",label:"⚔️",tip:"Head-to-Head"},
     {id:"groups",label:"🌍",tip:"Groups"},
     {id:"schedule",label:"📅",tip:"Schedule"},
+    {id:"profile",label:"👤",tip:"Profile"},
   ];
   const adminTabs=[
     {id:"home",label:"🏠",tip:"Home"},
@@ -296,28 +297,55 @@ export default function App() {
   ];
   const tabs=isAdmin?adminTabs:playerTabs;
 
+  const onLogout = ()=>{
+    setPlayer(""); setIsAdmin(false); setAdminInput(""); setPlayerInput(""); setTab("home");
+    localStorage.removeItem("wc2026_player"); localStorage.removeItem("wc2026_isAdmin");
+  };
+
   return (
-    <div style={S.app}>
-      <Header player={player} isAdmin={isAdmin} saving={saving} stageInfo={stageInfo} onLogout={()=>{
-        setPlayer(""); setIsAdmin(false); setAdminInput(""); setPlayerInput(""); setTab("home");
-        localStorage.removeItem("wc2026_player"); localStorage.removeItem("wc2026_isAdmin");
-      }}/>
-      <BottomNav tabs={tabs} tab={tab} setTab={setTab}/>
-      <div style={S.content}>
-        {tab==="home"          && <HomeTab ranked={ranked} scores={scores} player={player} upcoming={upcoming} recentResults={recentResults} data={data} isAdmin={isAdmin} stageInfo={stageInfo}/>}
-        {tab==="leaderboard"   && <Leaderboard ranked={ranked} scores={scores} player={player} data={data}/>}
-        {tab==="dashboard"     && <Dashboard ranked={ranked} scores={scores} player={player} data={data} isAdmin={isAdmin}/>}
-        {tab==="predictions"   && !isAdmin && <PredictionsTab player={player} data={data} update={update} toast_={toast_} stageInfo={stageInfo}/>}
-        {tab==="matches"       && !isAdmin && <MatchesTab player={player} data={data} update={update} toast_={toast_} matchFilter={matchFilter} setMatchFilter={setMatchFilter}/>}
-        {tab==="qualifiers"    && !isAdmin && <PlayerQualifiers player={player} data={data} update={update} toast_={toast_}/>}
-        {tab==="h2h"           && <H2HTab ranked={ranked} scores={scores} data={data} h2hA={h2hA} setH2hA={setH2hA} h2hB={h2hB} setH2hB={setH2hB}/>}
-        {tab==="groups"        && <GroupsTab/>}
-        {tab==="schedule"      && <ScheduleTab data={data}/>}
-        {tab==="rules"         && <RulesTab/>}
-        {tab==="admin_results" && isAdmin && <AdminResults data={data} update={update} toast_={toast_}/>}
-        {tab==="admin_qualifiers" && isAdmin && <AdminQualifiers data={data} update={update} toast_={toast_}/>}
-        {tab==="admin_deductions" && isAdmin && <AdminDeductions data={data} update={update} toast_={toast_} ranked={ranked}/>}
-        {tab==="admin_settings" && isAdmin && <AdminSettings data={data} update={update} toast_={toast_}/>}
+    <div style={{fontFamily:"'Trebuchet MS',sans-serif",background:"#F0F4F0",minHeight:"100vh",display:"flex"}}>
+      {/* Responsive Nav — sidebar on desktop, bottom on mobile */}
+      <Nav tabs={tabs} tab={tab} setTab={setTab} player={player} isAdmin={isAdmin}
+        onLogout={onLogout} saving={saving} stageInfo={stageInfo}/>
+      {/* Main area */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
+        {/* Mobile-only top header (desktop has sidebar header) */}
+        <MobileOnly>
+          <div style={S.header}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:22}}>⚽</span>
+              <div>
+                <div style={{fontWeight:900,fontSize:14,color:"#FFD700",fontFamily:"Georgia,serif"}}>WC 2026</div>
+                <div style={{fontSize:11,color:"#A5D6A7"}}>{isAdmin?"⚙️ Admin":`👤 ${player}`}</div>
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {saving&&<span style={{fontSize:13,opacity:.7}}>💾</span>}
+              <div style={{background:"rgba(255,255,255,.15)",borderRadius:20,padding:"3px 10px",fontSize:10,color:"#fff",fontWeight:600}}>{stageInfo.stage}</div>
+              <button style={{background:"none",border:"2px solid rgba(255,255,255,.3)",color:"#fff",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:12}} onClick={onLogout}>✕</button>
+            </div>
+          </div>
+        </MobileOnly>
+        {/* Content — extra bottom padding on mobile to clear the bottom nav */}
+        <div style={{padding:"16px 16px 90px",flex:1,overflowY:"auto"}}>
+          <div style={{maxWidth:860,margin:"0 auto"}}>
+            {tab==="home"          && <HomeTab ranked={ranked} scores={scores} player={player} upcoming={upcoming} recentResults={recentResults} data={data} isAdmin={isAdmin} stageInfo={stageInfo}/>}
+            {tab==="leaderboard"   && <Leaderboard ranked={ranked} scores={scores} player={player} data={data}/>}
+            {tab==="dashboard"     && <Dashboard ranked={ranked} scores={scores} player={player} data={data} isAdmin={isAdmin}/>}
+            {tab==="predictions"   && !isAdmin && <PredictionsTab player={player} data={data} update={update} toast_={toast_} stageInfo={stageInfo}/>}
+            {tab==="matches"       && !isAdmin && <MatchesTab player={player} data={data} update={update} toast_={toast_} matchFilter={matchFilter} setMatchFilter={setMatchFilter}/>}
+            {tab==="qualifiers"    && !isAdmin && <PlayerQualifiers player={player} data={data} update={update} toast_={toast_}/>}
+            {tab==="profile"       && !isAdmin && <PlayerProfile player={player} data={data} update={update} toast_={toast_}/>}
+            {tab==="h2h"           && <H2HTab ranked={ranked} scores={scores} data={data} h2hA={h2hA} setH2hA={setH2hA} h2hB={h2hB} setH2hB={setH2hB}/>}
+            {tab==="groups"        && <GroupsTab/>}
+            {tab==="schedule"      && <ScheduleTab data={data}/>}
+            {tab==="rules"         && <RulesTab/>}
+            {tab==="admin_results" && isAdmin && <AdminResults data={data} update={update} toast_={toast_}/>}
+            {tab==="admin_qualifiers" && isAdmin && <AdminQualifiers data={data} update={update} toast_={toast_}/>}
+            {tab==="admin_deductions" && isAdmin && <AdminDeductions data={data} update={update} toast_={toast_} ranked={ranked}/>}
+            {tab==="admin_settings" && isAdmin && <AdminSettings data={data} update={update} toast_={toast_}/>}
+          </div>
+        </div>
       </div>
       {toast && <Toast toast={toast}/>}
     </div>
@@ -335,27 +363,122 @@ function Splash() {
 }
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
-function Login({playerInput,setPlayerInput,adminInput,setAdminInput,setPlayer,setIsAdmin,toast_,toast,data}) {
-  const checkPw = pw => pw===ADMIN_PASSWORD || (data?.adminPassword && pw===data.adminPassword);
+function Login({playerInput,setPlayerInput,adminInput,setAdminInput,setPlayer,setIsAdmin,toast_,toast,data,update}) {
+  const checkAdminPw = pw => pw===ADMIN_PASSWORD || (data?.adminPassword && pw===data.adminPassword);
+  const passwords = data?.playerPasswords || {};
+
+  // Steps: "entry" → "new_password" (first time) → "existing_password" (returning)
+  const [step, setStep] = useState("entry");
+  const [nameInput, setNameInput] = useState(playerInput||"");
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwInput, setPwInput] = useState("");
+  const [err, setErr] = useState("");
+
+  function handleNameNext() {
+    const name = nameInput.trim();
+    if (!name) return;
+    setErr("");
+    if (passwords[name]) {
+      setStep("existing_password");
+    } else {
+      setStep("new_password");
+    }
+  }
+
+  function handleNewPassword() {
+    if (pw1.length < 4) { setErr("Password must be at least 4 characters."); return; }
+    if (pw1 !== pw2)    { setErr("Passwords don't match."); return; }
+    const name = nameInput.trim();
+    update(d => { d.playerPasswords = d.playerPasswords||{}; d.playerPasswords[name] = pw1; return d; });
+    setPlayer(name);
+  }
+
+  function handleExistingPassword() {
+    const name = nameInput.trim();
+    const adminPw = data?.adminPassword || ADMIN_PASSWORD;
+    if (pwInput === passwords[name] || checkAdminPw(pwInput)) {
+      setPlayer(name);
+    } else {
+      setErr("Wrong password. Ask admin to reset it if needed.");
+    }
+  }
+
   return (
     <div style={S.loginWrap}>
       <div style={S.loginCard}>
         <div style={{textAlign:"center",marginBottom:24}}>
           <div style={{fontSize:56,lineHeight:1}}>⚽</div>
-          <h1 style={{margin:"12px 0 4px",fontSize:30,fontWeight:900,color:"#1A5C2E",fontFamily:"Georgia,serif",lineHeight:1.1}}>FIFA World Cup<br/><span style={{color:"#FFD700",fontSize:38}}>2026</span></h1>
+          <h1 style={{margin:"12px 0 4px",fontSize:30,fontWeight:900,color:"#1A5C2E",fontFamily:"Georgia,serif",lineHeight:1.1}}>
+            FIFA World Cup<br/><span style={{color:"#FFD700",fontSize:38}}>2026</span>
+          </h1>
           <p style={{margin:0,color:"#888",fontSize:15,fontWeight:600,letterSpacing:2,textTransform:"uppercase"}}>Betting Tracker</p>
         </div>
+
         <div style={{height:1,background:"#eee",margin:"0 0 20px"}}/>
-        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-          <label style={S.lbl}>Your Name</label>
-          <input style={S.inp} placeholder="Type your name…" value={playerInput} onChange={e=>setPlayerInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&playerInput.trim()&&setPlayer(playerInput.trim())}/>
-          <button style={S.btn} onClick={()=>playerInput.trim()&&setPlayer(playerInput.trim())}>Enter as Player →</button>
-        </div>
+
+        {/* ── Step 1: Enter name ── */}
+        {step==="entry" && (
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+            <label style={S.lbl}>Your Name</label>
+            <input style={S.inp} placeholder="Type your name…" value={nameInput}
+              onChange={e=>{setNameInput(e.target.value);setErr("");}}
+              onKeyDown={e=>e.key==="Enter"&&nameInput.trim()&&handleNameNext()}/>
+            {err&&<div style={{color:"#C62828",fontSize:12}}>{err}</div>}
+            <button style={S.btn} onClick={handleNameNext}>Continue →</button>
+          </div>
+        )}
+
+        {/* ── Step 2a: New player — create password ── */}
+        {step==="new_password" && (
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+            <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#1B5E20",marginBottom:4}}>
+              👋 Welcome <strong>{nameInput}</strong>! Create a password to secure your account.
+            </div>
+            <label style={S.lbl}>Create Password</label>
+            <input style={S.inp} type="password" placeholder="Min 4 characters" value={pw1}
+              onChange={e=>{setPw1(e.target.value);setErr("");}}/>
+            <label style={S.lbl}>Confirm Password</label>
+            <input style={S.inp} type="password" placeholder="Repeat password" value={pw2}
+              onChange={e=>{setPw2(e.target.value);setErr("");}}
+              onKeyDown={e=>e.key==="Enter"&&handleNewPassword()}/>
+            {err&&<div style={{color:"#C62828",fontSize:12}}>{err}</div>}
+            <button style={S.btn} onClick={handleNewPassword}>Create Account →</button>
+            <button style={{...S.btn,background:"#888",marginTop:2}} onClick={()=>{setStep("entry");setErr("");}}>← Back</button>
+          </div>
+        )}
+
+        {/* ── Step 2b: Returning player — enter password ── */}
+        {step==="existing_password" && (
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+            <div style={{background:"#E3F2FD",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#01579B",marginBottom:4}}>
+              👋 Welcome back <strong>{nameInput}</strong>! Enter your password to continue.
+            </div>
+            <label style={S.lbl}>Password</label>
+            <input style={S.inp} type="password" placeholder="Your password" value={pwInput}
+              onChange={e=>{setPwInput(e.target.value);setErr("");}}
+              onKeyDown={e=>e.key==="Enter"&&handleExistingPassword()}/>
+            {err&&(
+              <div style={{background:"#FFEBEE",borderRadius:8,padding:"8px 10px",fontSize:12,color:"#C62828"}}>
+                {err}
+              </div>
+            )}
+            <button style={S.btn} onClick={handleExistingPassword}>Log In →</button>
+            <button style={{...S.btn,background:"#888",marginTop:2}} onClick={()=>{setStep("entry");setErr("");setPwInput("");}}>← Back</button>
+          </div>
+        )}
+
         <div style={{height:1,background:"#eee",margin:"0 0 20px"}}/>
+
+        {/* ── Admin login ── */}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           <label style={S.lbl}>Admin Access</label>
-          <input style={S.inp} type="password" placeholder="Admin password…" value={adminInput} onChange={e=>setAdminInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(checkPw(adminInput))setIsAdmin(true);else toast_("Wrong password","error");}}}/>
-          <button style={{...S.btn,background:"#E65100"}} onClick={()=>{if(checkPw(adminInput))setIsAdmin(true);else toast_("Wrong password","error");}}>Enter as Admin ⚙️</button>
+          <input style={S.inp} type="password" placeholder="Admin password…" value={adminInput}
+            onChange={e=>setAdminInput(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter"){if(checkAdminPw(adminInput))setIsAdmin(true);else toast_("Wrong password","error");}}}/>
+          <button style={{...S.btn,background:"#E65100"}} onClick={()=>{if(checkAdminPw(adminInput))setIsAdmin(true);else toast_("Wrong password","error");}}>
+            Enter as Admin ⚙️
+          </button>
         </div>
       </div>
       {toast&&<Toast toast={toast}/>}
@@ -363,39 +486,109 @@ function Login({playerInput,setPlayerInput,adminInput,setAdminInput,setPlayer,se
   );
 }
 
-// ─── HEADER ───────────────────────────────────────────────────────────────────
-function Header({player,isAdmin,saving,stageInfo,onLogout}) {
-  return (
-    <div style={S.header}>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:24}}>⚽</span>
-        <div>
-          <div style={{fontWeight:900,fontSize:15,color:"#FFD700",fontFamily:"Georgia,serif"}}>WC 2026</div>
-          <div style={{fontSize:11,color:"#A5D6A7"}}>{isAdmin?"⚙️ Admin":player&&`👤 ${player}`}</div>
-        </div>
+// ─── RESPONSIVE NAV ───────────────────────────────────────────────────────────
+function Nav({tabs,tab,setTab,player,isAdmin,onLogout,saving,stageInfo}) {
+  const [mobileOpen,setMobileOpen]=useState(false);
+
+  // Sidebar (desktop ≥ 768px)
+  const sidebar = (
+    <div style={{
+      width:200,flexShrink:0,background:"#1A5C2E",minHeight:"100vh",
+      display:"flex",flexDirection:"column",position:"sticky",top:0,
+      boxShadow:"2px 0 12px rgba(0,0,0,.15)",zIndex:90,
+    }}>
+      {/* Logo */}
+      <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+        <div style={{fontSize:28,lineHeight:1}}>⚽</div>
+        <div style={{fontWeight:900,fontSize:14,color:"#FFD700",fontFamily:"Georgia,serif",marginTop:6}}>WC 2026</div>
+        <div style={{fontSize:11,color:"#A5D6A7",marginTop:2}}>{isAdmin?"⚙️ Admin":`👤 ${player}`}</div>
+        {saving&&<div style={{fontSize:10,color:"#FFD700",marginTop:2}}>💾 Saving…</div>}
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:8}}>
-        {saving&&<span style={{fontSize:14,opacity:.7}}>💾</span>}
-        <div style={{background:"rgba(255,255,255,.15)",borderRadius:20,padding:"3px 10px",fontSize:11,color:"#fff",fontWeight:600}}>{stageInfo.stage}</div>
-        <button style={{background:"none",border:"2px solid rgba(255,255,255,.3)",color:"#fff",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:13}} onClick={onLogout}>✕</button>
+      {/* Stage pill */}
+      <div style={{padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+        <div style={{background:"rgba(255,255,255,.12)",borderRadius:20,padding:"3px 10px",fontSize:11,color:"#fff",fontWeight:600,textAlign:"center"}}>{stageInfo.stage}</div>
+      </div>
+      {/* Nav items */}
+      <div style={{flex:1,overflowY:"auto",padding:"8px 0"}}>
+        {tabs.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{
+            width:"100%",display:"flex",alignItems:"center",gap:10,
+            padding:"10px 16px",background:tab===t.id?"rgba(255,255,255,.15)":"none",
+            border:"none",borderLeft:tab===t.id?"3px solid #FFD700":"3px solid transparent",
+            cursor:"pointer",textAlign:"left",transition:"all .15s",
+          }}>
+            <span style={{fontSize:16,flexShrink:0}}>{t.label}</span>
+            <span style={{fontSize:12,fontWeight:tab===t.id?800:400,color:tab===t.id?"#FFD700":"#A5D6A7",whiteSpace:"nowrap"}}>{t.tip}</span>
+          </button>
+        ))}
+      </div>
+      {/* Logout */}
+      <div style={{padding:"12px",borderTop:"1px solid rgba(255,255,255,.1)"}}>
+        <button style={{...sBtn,background:"rgba(255,255,255,.1)",color:"#fff",fontSize:12,padding:"8px 12px"}} onClick={onLogout}>
+          ✕ Log Out
+        </button>
       </div>
     </div>
   );
-}
 
-// ─── BOTTOM NAV ───────────────────────────────────────────────────────────────
-function BottomNav({tabs,tab,setTab}) {
-  return (
-    <div style={S.bottomNav}>
+  // Bottom nav (mobile < 768px)
+  const bottomNav = (
+    <div style={{
+      position:"fixed",bottom:0,left:0,right:0,
+      background:"#fff",borderTop:"1px solid #e0e0e0",
+      display:"flex",justifyContent:"space-around",
+      zIndex:99,padding:"4px 0 6px",
+      boxShadow:"0 -2px 12px rgba(0,0,0,.08)",
+    }}>
       {tabs.map(t=>(
-        <button key={t.id} title={t.tip} style={{...S.navBtn,...(tab===t.id?S.navActive:{})}} onClick={()=>setTab(t.id)}>
-          <span style={{fontSize:18}}>{t.label}</span>
-          <span style={{fontSize:9,marginTop:1,opacity:tab===t.id?1:.6}}>{t.tip}</span>
+        <button key={t.id} title={t.tip} onClick={()=>setTab(t.id)} style={{
+          flex:1,background:"none",border:"none",
+          padding:"4px 2px 2px",cursor:"pointer",
+          display:"flex",flexDirection:"column",alignItems:"center",gap:1,
+          color:tab===t.id?"#1B5E20":"#aaa",
+          minWidth:0,maxWidth:64,
+        }}>
+          <span style={{fontSize:17,lineHeight:1}}>{t.label}</span>
+          <span style={{fontSize:8,fontWeight:tab===t.id?800:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",width:"100%",textAlign:"center"}}>
+            {t.tip}
+          </span>
+          {tab===t.id&&<div style={{width:16,height:2,background:"#1B5E20",borderRadius:999,marginTop:1}}/>}
         </button>
       ))}
     </div>
   );
+
+  return (
+    <>
+      {/* Desktop sidebar — hidden on mobile via media query workaround using ref */}
+      <DesktopOnly>{sidebar}</DesktopOnly>
+      {/* Mobile bottom nav — hidden on desktop */}
+      <MobileOnly>{bottomNav}</MobileOnly>
+    </>
+  );
 }
+
+// Helper components to conditionally render based on screen width
+function DesktopOnly({children}) {
+  const [show,setShow]=useState(window.innerWidth>=768);
+  useEffect(()=>{
+    const fn=()=>setShow(window.innerWidth>=768);
+    window.addEventListener("resize",fn);
+    return ()=>window.removeEventListener("resize",fn);
+  },[]);
+  return show?children:null;
+}
+function MobileOnly({children}) {
+  const [show,setShow]=useState(window.innerWidth<768);
+  useEffect(()=>{
+    const fn=()=>setShow(window.innerWidth<768);
+    window.addEventListener("resize",fn);
+    return ()=>window.removeEventListener("resize",fn);
+  },[]);
+  return show?children:null;
+}
+// Shared button style for nav logout
+const sBtn={background:"#1B5E20",color:"#fff",border:"none",borderRadius:8,padding:"10px 16px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"};
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stageInfo}) {
@@ -1190,6 +1383,70 @@ function AdminResults({data,update,toast_}) {
   );
 }
 
+// ─── PLAYER PROFILE (change password) ────────────────────────────────────────
+function PlayerProfile({player,data,update,toast_}) {
+  const [form,setForm]=useState({current:"",next:"",confirm:""});
+  const [err,setErr]=useState("");
+  const passwords = data?.playerPasswords||{};
+
+  function changePassword() {
+    setErr("");
+    const adminPw = data?.adminPassword||ADMIN_PASSWORD;
+    const isAdminOverride = form.current===ADMIN_PASSWORD||(data?.adminPassword&&form.current===data.adminPassword);
+    if (!isAdminOverride && form.current !== passwords[player]) {
+      setErr("Current password is incorrect."); return;
+    }
+    if (form.next.length < 4) { setErr("New password must be at least 4 characters."); return; }
+    if (form.next !== form.confirm) { setErr("New passwords don't match."); return; }
+    update(d=>{ d.playerPasswords=d.playerPasswords||{}; d.playerPasswords[player]=form.next; return d; });
+    setForm({current:"",next:"",confirm:""});
+    toast_("Password updated ✅");
+  }
+
+  return (
+    <div style={S.sec}>
+      <h2 style={S.h2}>👤 My Profile</h2>
+      <div style={S.card}>
+        <div style={S.blockTitle}>Account</div>
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #f5f5f5",marginBottom:16}}>
+          <div style={{width:44,height:44,borderRadius:"50%",background:playerColor(player),display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:18}}>
+            {player[0]?.toUpperCase()}
+          </div>
+          <div>
+            <div style={{fontWeight:800,fontSize:16}}>{player}</div>
+            <div style={{fontSize:12,color:"#888"}}>Player account</div>
+          </div>
+        </div>
+
+        <div style={S.blockTitle}>🔑 Change Password</div>
+        <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
+          You can also use the <strong>admin password</strong> as your current password if you've forgotten yours.
+        </p>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div>
+            <label style={S.lbl}>Current Password</label>
+            <input style={S.inp} type="password" placeholder="Current password" value={form.current}
+              onChange={e=>{setForm(v=>({...v,current:e.target.value}));setErr("");}}/>
+          </div>
+          <div>
+            <label style={S.lbl}>New Password</label>
+            <input style={S.inp} type="password" placeholder="Min 4 characters" value={form.next}
+              onChange={e=>{setForm(v=>({...v,next:e.target.value}));setErr("");}}/>
+          </div>
+          <div>
+            <label style={S.lbl}>Confirm New Password</label>
+            <input style={S.inp} type="password" placeholder="Repeat new password" value={form.confirm}
+              onChange={e=>{setForm(v=>({...v,confirm:e.target.value}));setErr("");}}
+              onKeyDown={e=>e.key==="Enter"&&changePassword()}/>
+          </div>
+          {err&&<div style={{background:"#FFEBEE",borderRadius:8,padding:"8px 12px",color:"#C62828",fontSize:13}}>{err}</div>}
+          <button style={{...S.btn,background:"#01579B"}} onClick={changePassword}>🔑 Update Password</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── PLAYER: QUALIFIERS ───────────────────────────────────────────────────────
 function PlayerQualifiers({player,data,update,toast_}) {
   const locked = new Date() >= new Date("2026-06-11T15:00:00");
@@ -1535,12 +1792,20 @@ function AdminSettings({data,update,toast_}) {
                     </div>
                   </div>
                   {!isConfirming && (
-                    <button
-                      style={{...S.btn,background:"#C62828",padding:"6px 14px",fontSize:12,width:"auto"}}
-                      onClick={()=>setConfirmDelete(p)}
-                    >
-                      🗑️ Delete
-                    </button>
+                    <div style={{display:"flex",gap:6}}>
+                      <button
+                        style={{...S.btn,background:"#01579B",padding:"6px 12px",fontSize:12,width:"auto"}}
+                        onClick={()=>{ update(d=>{d.playerPasswords=d.playerPasswords||{};delete d.playerPasswords[p];return d;}); toast_(`Password reset for ${p} ✅`); }}
+                      >
+                        🔑 Reset PW
+                      </button>
+                      <button
+                        style={{...S.btn,background:"#C62828",padding:"6px 14px",fontSize:12,width:"auto"}}
+                        onClick={()=>setConfirmDelete(p)}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
                   )}
                 </div>
                 {isConfirming && (
@@ -1662,18 +1927,21 @@ function AdminSettings({data,update,toast_}) {
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 function Toast({toast}) {
-  return <div style={{position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",background:toast.type==="error"?"#C62828":"#1B5E20",color:"#fff",padding:"12px 22px",borderRadius:12,fontWeight:700,fontSize:14,zIndex:9999,boxShadow:"0 4px 20px rgba(0,0,0,.25)",whiteSpace:"nowrap"}}>{toast.msg}</div>;
+  return (
+    <div style={{
+      position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",
+      background:toast.type==="error"?"#C62828":"#1B5E20",
+      color:"#fff",padding:"12px 22px",borderRadius:12,fontWeight:700,
+      fontSize:14,zIndex:9999,boxShadow:"0 4px 20px rgba(0,0,0,.25)",
+      whiteSpace:"nowrap",
+    }}>{toast.msg}</div>
+  );
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const S = {
-  app:{fontFamily:"'Trebuchet MS',sans-serif",background:"#F0F4F0",minHeight:"100vh",maxWidth:900,margin:"0 auto",paddingBottom:70},
-  header:{background:"#1A5C2E",color:"#fff",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100},
-  bottomNav:{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:900,background:"#fff",borderTop:"1px solid #e0e0e0",display:"flex",justifyContent:"space-around",zIndex:99,padding:"4px 0"},
-  navBtn:{flex:1,background:"none",border:"none",padding:"4px 2px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",color:"#888",fontSize:12,minWidth:0},
-  navActive:{color:"#1B5E20",fontWeight:700},
-  content:{padding:"14px 12px 24px"},
-  sec:{maxWidth:860,margin:"0 auto"},
+  header:{background:"#1A5C2E",color:"#fff",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,flexShrink:0},
+  sec:{},
   h2:{fontSize:20,fontWeight:900,color:"#1A5C2E",marginBottom:12,marginTop:0},
   card:{background:"#fff",borderRadius:14,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,.07)",marginBottom:14},
   blockTitle:{fontWeight:800,fontSize:14,color:"#1A5C2E",marginBottom:10,paddingBottom:8,borderBottom:"2px solid #E8F5E9"},
