@@ -1385,6 +1385,36 @@ function AdminSettings({data,update,toast_}) {
   const [importText,setImportText]=useState("");
   const [importError,setImportError]=useState("");
   const [showConfirmReset,setShowConfirmReset]=useState(false);
+  const [confirmDelete,setConfirmDelete]=useState(null); // player name to delete
+
+  // ── Delete player ─────────────────────────────────────────────────────────
+  function deletePlayer(name) {
+    update(d => {
+      // Remove tournament predictions
+      delete d.predictions[name];
+      // Remove deductions
+      delete d.deductions[name];
+      // Remove all match predictions for this player
+      Object.keys(d.matchPredictions).forEach(k => {
+        if (k.startsWith(name + "_")) delete d.matchPredictions[k];
+      });
+      // Remove all qualifier picks for this player
+      Object.keys(d.groupQualifiers).forEach(k => {
+        if (k.startsWith(name + "_")) delete d.groupQualifiers[k];
+      });
+      // Log the deletion
+      d.changeLog.push({
+        date: new Date().toISOString().slice(0,10),
+        player: name,
+        what: "Player deleted by admin",
+        stage: getCurrentStage().stage,
+        deduction: 0,
+      });
+      return d;
+    });
+    setConfirmDelete(null);
+    toast_(`${name} deleted ✅`);
+  }
 
   // ── Export ────────────────────────────────────────────────────────────────
   function exportBackup() {
@@ -1472,6 +1502,66 @@ function AdminSettings({data,update,toast_}) {
             <span style={{fontWeight:800,color:"#1A5C2E"}}>{v}</span>
           </div>
         ))}
+      </div>
+
+      {/* Player management */}
+      <div style={S.card}>
+        <div style={S.blockTitle}>👤 Player Management</div>
+        {(() => {
+          const players = [...new Set([
+            ...Object.keys(data.predictions),
+            ...Object.keys(data.matchPredictions).map(k=>k.split("_").slice(0,-1).join("_")),
+            ...Object.keys(data.deductions),
+          ])].sort();
+          if (players.length === 0) return (
+            <p style={{color:"#bbb",fontSize:13}}>No players have joined yet.</p>
+          );
+          return players.map(p => {
+            const matchCount = Object.keys(data.matchPredictions).filter(k=>k.startsWith(p+"_")).length;
+            const hasPreds = !!data.predictions[p]?.winner;
+            const qualCount = Object.keys(data.groupQualifiers).filter(k=>k.startsWith(p+"_")).length;
+            const isConfirming = confirmDelete === p;
+            return (
+              <div key={p} style={{padding:"10px 0",borderBottom:"1px solid #f5f5f5"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                  <div style={{width:10,height:10,borderRadius:"50%",background:playerColor(p),flexShrink:0}}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:14}}>{p}</div>
+                    <div style={{fontSize:11,color:"#888",marginTop:2,display:"flex",gap:10,flexWrap:"wrap"}}>
+                      <span>{hasPreds?"✅ Predictions set":"⭕ No predictions"}</span>
+                      <span>⚽ {matchCount} match picks</span>
+                      <span>👥 {qualCount} qualifier picks</span>
+                      {data.deductions[p]>0&&<span style={{color:"#ef5350"}}>📉 -{data.deductions[p]}pts deducted</span>}
+                    </div>
+                  </div>
+                  {!isConfirming && (
+                    <button
+                      style={{...S.btn,background:"#C62828",padding:"6px 14px",fontSize:12,width:"auto"}}
+                      onClick={()=>setConfirmDelete(p)}
+                    >
+                      🗑️ Delete
+                    </button>
+                  )}
+                </div>
+                {isConfirming && (
+                  <div style={{background:"#FFEBEE",borderRadius:10,padding:"10px 12px",marginTop:8}}>
+                    <div style={{fontWeight:700,color:"#C62828",fontSize:13,marginBottom:8}}>
+                      Delete <strong>{p}</strong>? This removes all their predictions, picks and deductions permanently.
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button style={{...S.btn,background:"#C62828",flex:1,padding:"8px"}} onClick={()=>deletePlayer(p)}>
+                        Yes, delete
+                      </button>
+                      <button style={{...S.btn,background:"#37474F",flex:1,padding:"8px"}} onClick={()=>setConfirmDelete(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          });
+        })()}
       </div>
 
       {/* Export */}
