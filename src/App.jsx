@@ -272,6 +272,7 @@ export default function App() {
     {id:"dashboard",label:"📊",tip:"Dashboard"},
     {id:"predictions",label:"🔮",tip:"Predictions"},
     {id:"matches",label:"⚽",tip:"Matches"},
+    {id:"qualifiers",label:"👥",tip:"Qualifiers"},
     {id:"h2h",label:"⚔️",tip:"Head-to-Head"},
     {id:"groups",label:"🌍",tip:"Groups"},
     {id:"schedule",label:"📅",tip:"Schedule"},
@@ -301,6 +302,7 @@ export default function App() {
         {tab==="dashboard"     && <Dashboard ranked={ranked} scores={scores} player={player} data={data} isAdmin={isAdmin}/>}
         {tab==="predictions"   && !isAdmin && <PredictionsTab player={player} data={data} update={update} toast_={toast_} stageInfo={stageInfo}/>}
         {tab==="matches"       && !isAdmin && <MatchesTab player={player} data={data} update={update} toast_={toast_} matchFilter={matchFilter} setMatchFilter={setMatchFilter}/>}
+        {tab==="qualifiers"    && !isAdmin && <PlayerQualifiers player={player} data={data} update={update} toast_={toast_}/>}
         {tab==="h2h"           && <H2HTab ranked={ranked} scores={scores} data={data} h2hA={h2hA} setH2hA={setH2hA} h2hB={h2hB} setH2hB={setH2hB}/>}
         {tab==="groups"        && <GroupsTab/>}
         {tab==="schedule"      && <ScheduleTab data={data}/>}
@@ -1176,6 +1178,105 @@ function AdminResults({data,update,toast_}) {
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PLAYER: QUALIFIERS ───────────────────────────────────────────────────────
+function PlayerQualifiers({player,data,update,toast_}) {
+  const locked = new Date() >= new Date("2026-06-11T15:00:00");
+  const GC={A:"#B71C1C",B:"#1A237E",C:"#1B5E20",D:"#E65100",E:"#4A148C",F:"#006064",G:"#880E4F",H:"#F57F17",I:"#01579B",J:"#33691E",K:"#37474F",L:"#6A1B9A"};
+
+  const getT=(grp,slot)=>data.groupQualifiers[`${player}_${grp}_${slot}`]?.team||"";
+  const getQ=(grp,slot)=>data.groupQualifiers[`${player}_${grp}_${slot}`]?.qualified??null;
+
+  function setTeam(grp,slot,team){
+    update(d=>{
+      const key=`${player}_${grp}_${slot}`;
+      d.groupQualifiers[key]={...d.groupQualifiers[key],team};
+      return d;
+    });
+  }
+
+  // Count how many picks made and points earned so far
+  const totalPicks = Object.keys(GROUPS).reduce((sum,grp)=>{
+    return sum + [0,1].filter(s=>getT(grp,s)).length;
+  },0);
+  const maxPicks = Object.keys(GROUPS).length * 2; // 24
+  const ptsSoFar = Object.keys(GROUPS).reduce((sum,grp)=>{
+    return sum + [0,1].filter(s=>getQ(grp,s)===true).length * 2;
+  },0);
+
+  return (
+    <div style={S.sec}>
+      <h2 style={S.h2}>👥 Group Qualifier Predictions</h2>
+      {/* Stats bar */}
+      <div style={{display:"flex",gap:8,marginBottom:12,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+        {[["👥 Picks Made",`${totalPicks}/${maxPicks}`],["✅ Pts Earned",ptsSoFar],["💰 Max Possible",maxPicks*2]].map(([l,v])=>(
+          <div key={l} style={{flex:1,textAlign:"center"}}>
+            <div style={{fontWeight:900,fontSize:18,color:"#1A5C2E"}}>{v}</div>
+            <div style={{fontSize:10,color:"#888"}}>{l}</div>
+          </div>
+        ))}
+      </div>
+
+      {locked && (
+        <div style={{background:"#FFF3E0",border:"1px solid #FFB74D",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13}}>
+          🔒 Group stage has started — predictions are locked. Results will be marked by admin after June 27.
+        </div>
+      )}
+      {!locked && (
+        <div style={{background:"#E8F5E9",border:"1px solid #A5D6A7",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#1B5E20"}}>
+          ⏰ Pick <strong>2 teams per group</strong> that you think will advance. Locks at tournament start (Jun 11). Worth <strong>2 pts each</strong>, max 48 pts.
+        </div>
+      )}
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:10}}>
+        {Object.entries(GROUPS).map(([grp,teams])=>{
+          const pick0=getT(grp,0), pick1=getT(grp,1);
+          const q0=getQ(grp,0), q1=getQ(grp,1);
+          return (
+            <div key={grp} style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+              <div style={{background:GC[grp],color:"#fff",fontWeight:900,fontSize:13,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span>GROUP {grp}</span>
+                {(pick0||pick1) && (
+                  <span style={{fontSize:11,opacity:.8}}>
+                    {[q0,q1].filter(q=>q===true).length * 2} pts
+                  </span>
+                )}
+              </div>
+              <div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
+                {[0,1].map(slot=>{
+                  const pick = slot===0?pick0:pick1;
+                  const qual = slot===0?q0:q1;
+                  return (
+                    <div key={slot}>
+                      <div style={{fontSize:10,color:"#888",marginBottom:3,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>
+                        Pick {slot+1}
+                      </div>
+                      <select
+                        style={{...S.sel,
+                          borderColor: qual===true?"#4CAF50":qual===false?"#ef5350":pick?"#1B5E20":"#e0e0e0",
+                          background: qual===true?"#E8F5E9":qual===false?"#FFEBEE":"#fff",
+                          color: locked?"#888":"#000",
+                        }}
+                        value={pick}
+                        disabled={locked}
+                        onChange={e=>setTeam(grp,slot,e.target.value)}
+                      >
+                        <option value="">— Select team —</option>
+                        {teams.map(t=><option key={t} value={t}>{t}</option>)}
+                      </select>
+                      {qual===true && <div style={{fontSize:11,color:"#4CAF50",fontWeight:700,marginTop:3}}>✅ Qualified! +2 pts</div>}
+                      {qual===false && <div style={{fontSize:11,color:"#ef5350",fontWeight:700,marginTop:3}}>❌ Did not qualify</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
