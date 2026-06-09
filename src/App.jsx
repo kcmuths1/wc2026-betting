@@ -25,7 +25,7 @@ const STAGE_COLORS = {
   "Group Stage":"#1B5E20","Round of 32":"#01579B","Round of 16":"#4A148C",
   "Quarterfinal":"#880E4F","Semifinal":"#E65100","Third-Place":"#37474F","Final":"#B71C1C"
 };
-const POINTS = { winner:20,runnerUp:12,thirdPlace:8,goldenBoot:15,goldenBall:15,exactScore:8,correctResult:3,groupQualifier:2 };
+const POINTS = { winner:20,runnerUp:12,thirdPlace:8,goldenBoot:15,goldenBall:15,goldenGlove:12,exactScore:8,correctResult:3,groupQualifier:2 };
 const DEDUCTIONS = [
   {stage:"Pre-Tournament",before:"2026-06-11",pts:0,label:"Free"},
   {stage:"Group Stage",before:"2026-06-28",pts:5,label:"−5 pts"},
@@ -300,6 +300,7 @@ function calcScores(data) {
     if(pred.thirdPlace&&data.matchActuals._thirdPlace&&pred.thirdPlace===data.matchActuals._thirdPlace) predPts+=POINTS.thirdPlace;
     if(pred.goldenBoot&&data.matchActuals._goldenBoot&&pred.goldenBoot===data.matchActuals._goldenBoot) predPts+=POINTS.goldenBoot;
     if(pred.goldenBall&&data.matchActuals._goldenBall&&pred.goldenBall===data.matchActuals._goldenBall) predPts+=POINTS.goldenBall;
+    if(pred.goldenGlove&&data.matchActuals._goldenGlove&&pred.goldenGlove===data.matchActuals._goldenGlove) predPts+=POINTS.goldenGlove;
     MATCHES.forEach(m => {
       const key=`${p}_${m.id}`, predicted=data.matchPredictions[key], actual=data.matchActuals[m.id]?.score;
       if(actual&&predicted){ const pts=calcMatchPts(actual,predicted); matchPts+=pts; if(pts===POINTS.exactScore)exactCount++; else if(pts===POINTS.correctResult)resultCount++; }
@@ -448,9 +449,87 @@ export default function App() {
 // ─── SPLASH ───────────────────────────────────────────────────────────────────
 function Splash() {
   return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"linear-gradient(135deg,#1A5C2E,#0D3B1E)"}}>
-      <div style={{fontSize:72,marginBottom:16}}>⚽</div>
-      <div style={{color:"#FFD700",fontSize:22,fontWeight:900,fontFamily:"Georgia,serif"}}>Loading…</div>
+    <div style={{minHeight:"100vh",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <Fifa26Background/>
+      <div style={{position:"relative",zIndex:1,textAlign:"center"}}>
+        <WC26Ball size={80}/>
+        <div style={{color:"#FFD700",fontSize:22,fontWeight:900,fontFamily:"Georgia,serif",marginTop:16}}>Loading…</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── FIFA 26 BALL SVG ────────────────────────────────────────────────────────
+function WC26Ball({size=80}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="ballClip"><circle cx="50" cy="50" r="46"/></clipPath>
+        <radialGradient id="ballShine" cx="35%" cy="30%" r="60%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.9)"/>
+          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+      {/* Base white */}
+      <circle cx="50" cy="50" r="46" fill="#fff" stroke="#ddd" strokeWidth="1"/>
+      {/* Coloured panels inspired by Trionda */}
+      <g clipPath="url(#ballClip)">
+        <path d="M50 4 Q70 15 80 35 Q65 30 50 40 Q35 30 20 35 Q30 15 50 4Z" fill="#E53935"/>
+        <path d="M80 35 Q90 50 80 65 Q70 55 65 50 Q70 40 80 35Z" fill="#1E88E5"/>
+        <path d="M80 65 Q70 85 50 96 Q55 75 65 70 Q73 68 80 65Z" fill="#43A047"/>
+        <path d="M50 96 Q30 85 20 65 Q27 68 35 70 Q45 75 50 96Z" fill="#FFD700"/>
+        <path d="M20 65 Q10 50 20 35 Q30 40 35 50 Q30 55 20 65Z" fill="#8E24AA"/>
+        <path d="M20 35 Q35 30 50 40 Q50 55 35 50 Q27 42 20 35Z" fill="#00ACC1"/>
+        <path d="M80 35 Q65 30 50 40 Q50 55 65 50 Q73 42 80 35Z" fill="#FB8C00"/>
+        <path d="M50 40 Q65 50 65 70 Q55 75 50 96 Q45 75 35 70 Q35 50 50 40Z" fill="#fff" opacity="0.15"/>
+        {/* Pentagon patches */}
+        <polygon points="50,40 62,48 58,62 42,62 38,48" fill="#111" opacity="0.85"/>
+        <polygon points="50,4 60,12 56,24 44,24 40,12" fill="#111" opacity="0.75"/>
+        <polygon points="80,35 88,46 84,58 74,55 72,43" fill="#111" opacity="0.75"/>
+        <polygon points="72,68 80,65 84,58 74,55 65,65" fill="#111" opacity="0.6"/>
+        <polygon points="20,35 12,46 16,58 26,55 28,43" fill="#111" opacity="0.75"/>
+        <polygon points="28,68 20,65 16,58 26,55 35,65" fill="#111" opacity="0.6"/>
+        <polygon points="50,96 60,88 56,76 44,76 40,88" fill="#111" opacity="0.7"/>
+      </g>
+      {/* Shine overlay */}
+      <circle cx="50" cy="50" r="46" fill="url(#ballShine)"/>
+      {/* Outline */}
+      <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5"/>
+    </svg>
+  );
+}
+
+// ─── FIFA 26 BACKGROUND SVG ──────────────────────────────────────────────────
+function Fifa26Background() {
+  // Recreates the bold concentric coloured stripe aesthetic from the WC2026 branding
+  const stripes = [
+    "#E53935","#FB8C00","#FDD835","#43A047","#00ACC1",
+    "#1E88E5","#8E24AA","#D81B60","#F4511E","#00897B",
+    "#546E7A","#6D4C41","#1E88E5","#43A047","#E53935",
+  ];
+  return (
+    <div style={{position:"absolute",inset:0,overflow:"hidden",zIndex:0}}>
+      <svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <rect width="800" height="600" fill="#1a0a2e"/>
+        {/* Concentric perspective stripes — top */}
+        {stripes.map((c,i)=>(
+          <path key={`t${i}`}
+            d={`M${-50+i*28},0 L${850-i*28},0 L${500-i*22},${310-i*18} L${300+i*22},${310-i*18} Z`}
+            fill={c} opacity={0.7+i*0.01}/>
+        ))}
+        {/* Concentric perspective stripes — bottom */}
+        {stripes.map((c,i)=>(
+          <path key={`b${i}`}
+            d={`M${-50+i*28},600 L${850-i*28},600 L${500-i*22},${310+i*18} L${300+i*22},${310+i*18} Z`}
+            fill={c} opacity={0.7+i*0.01}/>
+        ))}
+        {/* Dark centre oval for readability */}
+        <ellipse cx="400" cy="300" rx="260" ry="220" fill="rgba(10,5,20,0.55)"/>
+        {/* "26" large background text */}
+        <text x="400" y="340" textAnchor="middle" fontSize="320" fontWeight="900"
+          fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2"
+          fontFamily="Georgia,serif">26</text>
+      </svg>
     </div>
   );
 }
@@ -460,7 +539,6 @@ function Login({playerInput,setPlayerInput,adminInput,setAdminInput,setPlayer,se
   const checkAdminPw = pw => pw===ADMIN_PASSWORD || (data?.adminPassword && pw===data.adminPassword);
   const passwords = data?.playerPasswords || {};
 
-  // Steps: "entry" → "new_password" (first time) → "existing_password" (returning)
   const [step, setStep] = useState("entry");
   const [nameInput, setNameInput] = useState(playerInput||"");
   const [pw1, setPw1] = useState("");
@@ -472,13 +550,9 @@ function Login({playerInput,setPlayerInput,adminInput,setAdminInput,setPlayer,se
     const name = nameInput.trim();
     if (!name) return;
     setErr("");
-    if (passwords[name]) {
-      setStep("existing_password");
-    } else {
-      setStep("new_password");
-    }
+    if (passwords[name]) { setStep("existing_password"); }
+    else { setStep("new_password"); }
   }
-
   function handleNewPassword() {
     if (pw1.length < 4) { setErr("Password must be at least 4 characters."); return; }
     if (pw1 !== pw2)    { setErr("Passwords don't match."); return; }
@@ -486,10 +560,8 @@ function Login({playerInput,setPlayerInput,adminInput,setAdminInput,setPlayer,se
     update(d => { d.playerPasswords = d.playerPasswords||{}; d.playerPasswords[name] = pw1; return d; });
     setPlayer(name);
   }
-
   function handleExistingPassword() {
     const name = nameInput.trim();
-    const adminPw = data?.adminPassword || ADMIN_PASSWORD;
     if (pwInput === passwords[name] || checkAdminPw(pwInput)) {
       setPlayer(name);
     } else {
@@ -497,81 +569,109 @@ function Login({playerInput,setPlayerInput,adminInput,setAdminInput,setPlayer,se
     }
   }
 
+  // Shared input style — dark themed for the new bg
+  const inp2 = {border:"2px solid rgba(255,255,255,0.25)",borderRadius:10,padding:"11px 14px",fontSize:14,outline:"none",fontFamily:"inherit",width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.12)",color:"#fff","::placeholder":{color:"rgba(255,255,255,0.5)"}};
+  const lbl2 = {fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.7)",textTransform:"uppercase",letterSpacing:.8,display:"block",marginBottom:4};
+  const btn2 = (bg="#1B5E20") => ({background:bg,color:"#fff",border:"none",borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",boxShadow:"0 4px 14px rgba(0,0,0,0.3)"});
+
   return (
-    <div style={S.loginWrap}>
-      <div style={S.loginCard}>
+    <div style={{minHeight:"100vh",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <Fifa26Background/>
+
+      {/* Card */}
+      <div style={{position:"relative",zIndex:1,background:"rgba(15,10,30,0.82)",backdropFilter:"blur(12px)",borderRadius:24,padding:"32px 28px",maxWidth:400,width:"100%",boxShadow:"0 24px 60px rgba(0,0,0,0.6)",border:"1px solid rgba(255,255,255,0.12)"}}>
+
+        {/* Logo area */}
         <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:56,lineHeight:1}}>⚽</div>
-          <h1 style={{margin:"12px 0 4px",fontSize:30,fontWeight:900,color:"#1A5C2E",fontFamily:"Georgia,serif",lineHeight:1.1}}>
-            FIFA World Cup<br/><span style={{color:"#FFD700",fontSize:38}}>2026</span>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
+            <WC26Ball size={90}/>
+          </div>
+          <h1 style={{margin:"0 0 4px",fontSize:28,fontWeight:900,color:"#fff",fontFamily:"Georgia,serif",lineHeight:1.1}}>
+            FIFA World Cup
           </h1>
-          <p style={{margin:0,color:"#888",fontSize:15,fontWeight:600,letterSpacing:2,textTransform:"uppercase"}}>Betting Tracker</p>
+          <div style={{fontSize:52,fontWeight:900,color:"#FFD700",fontFamily:"Georgia,serif",lineHeight:1,margin:"2px 0"}}>
+            2026
+          </div>
+          <p style={{margin:"6px 0 0",color:"rgba(255,255,255,0.5)",fontSize:13,fontWeight:600,letterSpacing:3,textTransform:"uppercase"}}>
+            Betting Tracker
+          </p>
+          <div style={{display:"flex",justifyContent:"center",gap:8,marginTop:10,flexWrap:"wrap"}}>
+            {["🇺🇸 USA","🇨🇦 Canada","🇲🇽 Mexico"].map(h=>(
+              <span key={h} style={{background:"rgba(255,255,255,0.1)",borderRadius:20,padding:"3px 10px",fontSize:11,color:"rgba(255,255,255,0.7)"}}>{h}</span>
+            ))}
+          </div>
         </div>
 
-        <div style={{height:1,background:"#eee",margin:"0 0 20px"}}/>
+        <div style={{height:1,background:"rgba(255,255,255,0.12)",margin:"0 0 20px"}}/>
 
-        {/* ── Step 1: Enter name ── */}
+        {/* Step 1: Name */}
         {step==="entry" && (
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-            <label style={S.lbl}>Your Name</label>
-            <input style={S.inp} placeholder="Type your name…" value={nameInput}
+            <label style={lbl2}>Your Name</label>
+            <input style={inp2} placeholder="Type your name…" value={nameInput}
               onChange={e=>{setNameInput(e.target.value);setErr("");}}
               onKeyDown={e=>e.key==="Enter"&&nameInput.trim()&&handleNameNext()}/>
-            {err&&<div style={{color:"#C62828",fontSize:12}}>{err}</div>}
-            <button style={S.btn} onClick={handleNameNext}>Continue →</button>
+            {err&&<div style={{color:"#FF8A80",fontSize:12}}>{err}</div>}
+            <button style={btn2("#FFD700")} onClick={handleNameNext}>
+              <span style={{color:"#1A1A1A",fontWeight:800}}>Continue →</span>
+            </button>
           </div>
         )}
 
-        {/* ── Step 2a: New player — create password ── */}
+        {/* Step 2a: New password */}
         {step==="new_password" && (
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-            <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#1B5E20",marginBottom:4}}>
-              👋 Welcome <strong>{nameInput}</strong>! Create a password to secure your account.
+            <div style={{background:"rgba(76,175,80,0.2)",border:"1px solid rgba(76,175,80,0.4)",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#A5D6A7"}}>
+              👋 Welcome <strong>{nameInput}</strong>! Create a password.
             </div>
-            <label style={S.lbl}>Create Password</label>
-            <input style={S.inp} type="password" placeholder="Min 4 characters" value={pw1}
+            <label style={lbl2}>Create Password</label>
+            <input style={inp2} type="password" placeholder="Min 4 characters" value={pw1}
               onChange={e=>{setPw1(e.target.value);setErr("");}}/>
-            <label style={S.lbl}>Confirm Password</label>
-            <input style={S.inp} type="password" placeholder="Repeat password" value={pw2}
+            <label style={lbl2}>Confirm Password</label>
+            <input style={inp2} type="password" placeholder="Repeat password" value={pw2}
               onChange={e=>{setPw2(e.target.value);setErr("");}}
               onKeyDown={e=>e.key==="Enter"&&handleNewPassword()}/>
-            {err&&<div style={{color:"#C62828",fontSize:12}}>{err}</div>}
-            <button style={S.btn} onClick={handleNewPassword}>Create Account →</button>
-            <button style={{...S.btn,background:"#888",marginTop:2}} onClick={()=>{setStep("entry");setErr("");}}>← Back</button>
+            {err&&<div style={{color:"#FF8A80",fontSize:12}}>{err}</div>}
+            <button style={btn2("#FFD700")} onClick={handleNewPassword}>
+              <span style={{color:"#1A1A1A",fontWeight:800}}>Create Account →</span>
+            </button>
+            <button style={{...btn2("rgba(255,255,255,0.1)"),marginTop:2}} onClick={()=>{setStep("entry");setErr("");}}>← Back</button>
           </div>
         )}
 
-        {/* ── Step 2b: Returning player — enter password ── */}
+        {/* Step 2b: Existing password */}
         {step==="existing_password" && (
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-            <div style={{background:"#E3F2FD",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#01579B",marginBottom:4}}>
-              👋 Welcome back <strong>{nameInput}</strong>! Enter your password to continue.
+            <div style={{background:"rgba(30,136,229,0.2)",border:"1px solid rgba(30,136,229,0.4)",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#90CAF9"}}>
+              👋 Welcome back <strong>{nameInput}</strong>!
             </div>
-            <label style={S.lbl}>Password</label>
-            <input style={S.inp} type="password" placeholder="Your password" value={pwInput}
+            <label style={lbl2}>Password</label>
+            <input style={inp2} type="password" placeholder="Your password" value={pwInput}
               onChange={e=>{setPwInput(e.target.value);setErr("");}}
               onKeyDown={e=>e.key==="Enter"&&handleExistingPassword()}/>
-            {err&&(
-              <div style={{background:"#FFEBEE",borderRadius:8,padding:"8px 10px",fontSize:12,color:"#C62828"}}>
-                {err}
-              </div>
-            )}
-            <button style={S.btn} onClick={handleExistingPassword}>Log In →</button>
-            <button style={{...S.btn,background:"#888",marginTop:2}} onClick={()=>{setStep("entry");setErr("");setPwInput("");}}>← Back</button>
+            {err&&<div style={{background:"rgba(198,40,40,0.2)",border:"1px solid rgba(198,40,40,0.4)",borderRadius:8,padding:"8px 10px",fontSize:12,color:"#FF8A80"}}>{err}</div>}
+            <button style={btn2("#FFD700")} onClick={handleExistingPassword}>
+              <span style={{color:"#1A1A1A",fontWeight:800}}>Log In →</span>
+            </button>
+            <button style={{...btn2("rgba(255,255,255,0.1)"),marginTop:2}} onClick={()=>{setStep("entry");setErr("");setPwInput("");}}>← Back</button>
           </div>
         )}
 
-        <div style={{height:1,background:"#eee",margin:"0 0 20px"}}/>
+        <div style={{height:1,background:"rgba(255,255,255,0.12)",margin:"0 0 20px"}}/>
 
-        {/* ── Admin login ── */}
+        {/* Admin */}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <label style={S.lbl}>Admin Access</label>
-          <input style={S.inp} type="password" placeholder="Admin password…" value={adminInput}
+          <label style={lbl2}>Admin Access</label>
+          <input style={inp2} type="password" placeholder="Admin password…" value={adminInput}
             onChange={e=>setAdminInput(e.target.value)}
             onKeyDown={e=>{if(e.key==="Enter"){if(checkAdminPw(adminInput))setIsAdmin(true);else toast_("Wrong password","error");}}}/>
-          <button style={{...S.btn,background:"#E65100"}} onClick={()=>{if(checkAdminPw(adminInput))setIsAdmin(true);else toast_("Wrong password","error");}}>
+          <button style={btn2("#E65100")} onClick={()=>{if(checkAdminPw(adminInput))setIsAdmin(true);else toast_("Wrong password","error");}}>
             Enter as Admin ⚙️
           </button>
+        </div>
+
+        <div style={{marginTop:16,textAlign:"center",fontSize:10,color:"rgba(255,255,255,0.3)",letterSpacing:1}}>
+          Jun 11 – Jul 19, 2026 · 48 Teams · 104 Matches
         </div>
       </div>
       {toast&&<Toast toast={toast}/>}
@@ -815,7 +915,7 @@ function Leaderboard({ranked,scores,player,data}) {
       <h2 style={S.h2}>🏆 Live Leaderboard</h2>
       {/* Points key */}
       <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:14}}>
-        {[["🏆","20"],["🥈","12"],["🥉","8"],["⚽","15"],["🎖","15"],["🎯","8"],["✅","3"],["👥","2"]].map(([l,v])=>(
+        {[["🏆","20"],["🥈","12"],["🥉","8"],["⚽","15"],["🎖","15"],["🧤","12"],["🎯","8"],["✅","3"],["👥","2"]].map(([l,v])=>(
           <div key={l} style={{background:"#E8F5E9",borderRadius:20,padding:"3px 9px",fontSize:11,border:"1px solid #C8E6C9",display:"flex",gap:4}}><span>{l}</span><strong>{v}pt</strong></div>
         ))}
       </div>
@@ -871,6 +971,7 @@ function Dashboard({ranked,scores,player,data,isAdmin}) {
       if(data.matchActuals._thirdPlace&&pred0.thirdPlace===data.matchActuals._thirdPlace)cum+=POINTS.thirdPlace;
       if(data.matchActuals._goldenBoot&&pred0.goldenBoot===data.matchActuals._goldenBoot)cum+=POINTS.goldenBoot;
       if(data.matchActuals._goldenBall&&pred0.goldenBall===data.matchActuals._goldenBall)cum+=POINTS.goldenBall;
+      if(data.matchActuals._goldenGlove&&pred0.goldenGlove===data.matchActuals._goldenGlove)cum+=POINTS.goldenGlove;
       playedMatches.slice(0,idx+1).forEach(mm=>{
         const key=`${name}_${mm.id}`,pred=data.matchPredictions[key],actual=data.matchActuals[mm.id]?.score;
         if(actual&&pred)cum+=calcMatchPts(actual,pred);
@@ -1007,7 +1108,7 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
   const predFields=[
     {key:"winner",label:"🏆 Winner",pts:20},{key:"runnerUp",label:"🥈 Runner-Up",pts:12},
     {key:"thirdPlace",label:"🥉 3rd Place",pts:8},{key:"goldenBoot",label:"⚽ Golden Boot",pts:15},
-    {key:"goldenBall",label:"🎖 Golden Ball",pts:15},
+    {key:"goldenBall",label:"🎖 Golden Ball",pts:15},{key:"goldenGlove",label:"🧤 Golden Glove",pts:12},
   ];
 
   return (
@@ -1130,7 +1231,7 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
 function PredictionsTab({player,data,update,toast_,stageInfo}) {
   const pred=data.predictions[player]||{};
   const locked=new Date()>=new Date("2026-06-11T15:00:00");
-  const [form,setForm]=useState({winner:pred.winner||"",runnerUp:pred.runnerUp||"",thirdPlace:pred.thirdPlace||"",goldenBoot:pred.goldenBoot||"",goldenBall:pred.goldenBall||""});
+  const [form,setForm]=useState({winner:pred.winner||"",runnerUp:pred.runnerUp||"",thirdPlace:pred.thirdPlace||"",goldenBoot:pred.goldenBoot||"",goldenBall:pred.goldenBall||"",goldenGlove:pred.goldenGlove||""});
   const [changed,setChanged]=useState(false);
 
   const fields=[
@@ -1139,6 +1240,7 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
     {key:"thirdPlace",label:"🥉 3rd Place",pts:8,color:"#CD7F32"},
     {key:"goldenBoot",label:"⚽ Golden Boot",pts:15,color:"#1B5E20"},
     {key:"goldenBall",label:"🎖 Golden Ball",pts:15,color:"#4A148C"},
+    {key:"goldenGlove",label:"🧤 Golden Glove",pts:12,color:"#01579B"},
   ];
 
   function save() {
@@ -1165,7 +1267,7 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
           const actualKey=`_${f.key}`;
           const actual=data.matchActuals[actualKey];
           const correct=actual&&form[f.key]===actual;
-          const isTextInput = f.key==="goldenBoot"||f.key==="goldenBall";
+          const isTextInput = f.key==="goldenBoot"||f.key==="goldenBall"||f.key==="goldenGlove";
           return (
             <div key={f.key} style={{background:"#fff",borderRadius:14,padding:14,boxShadow:"0 2px 8px rgba(0,0,0,.07)",borderLeft:`4px solid ${f.color}`}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -1387,13 +1489,13 @@ function RulesTab() {
   const sections=[
     {icon:"🎯",title:"Overview",color:"#1B5E20",body:<>
       <p style={S.rp}>A points-based prediction competition across all 104 matches of FIFA World Cup 2026 (Jun 11 – Jul 19). Three scoring categories:</p>
-      {[["🔮","Tournament Predictions","Pick Winner, Runner-Up, 3rd, Golden Boot & Ball before kick-off"],["⚽","Match Predictions","Predict the score of each match before it kicks off"],["👥","Group Qualifiers","Predict which 2 teams advance from each of 12 groups"]].map(([ic,t,d])=>(
+      {[["🔮","Tournament Predictions","Pick Winner, Runner-Up, 3rd, Golden Boot, Ball & Glove before kick-off"],["⚽","Match Predictions","Predict the score of each match before it kicks off"],["👥","Group Qualifiers","Predict which 2 teams advance from each of 12 groups"]].map(([ic,t,d])=>(
         <div key={t} style={S.ri}><span style={{fontSize:20}}>{ic}</span><div><strong>{t}</strong><br/><span style={{fontSize:12,color:"#666"}}>{d}</span></div></div>
       ))}
     </>},
     {icon:"🏆",title:"Tournament Prediction Points",color:"#E65100",body:<>
       <p style={S.rp}>Enter before <strong>Jun 11, 3:00 PM ET</strong>. Worth the most points.</p>
-      {[["🏆","Winner","20 pts","#FFD700"],["🥈","Runner-Up","12 pts","#C0C0C0"],["🥉","3rd Place","8 pts","#CD7F32"],["⚽","Golden Boot","15 pts","#1B5E20"],["🎖","Golden Ball","15 pts","#4A148C"]].map(([ic,t,p,c])=>(
+      {[["🏆","Winner","20 pts","#FFD700"],["🥈","Runner-Up","12 pts","#C0C0C0"],["🥉","3rd Place","8 pts","#CD7F32"],["⚽","Golden Boot","15 pts","#1B5E20"],["🎖","Golden Ball","15 pts","#4A148C"],["🧤","Golden Glove","12 pts","#01579B"]].map(([ic,t,p,c])=>(
         <div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"8px",background:"#fafafa",borderRadius:8,marginBottom:6}}>
           <span style={{fontSize:18}}>{ic}</span><span style={{flex:1,fontWeight:700}}>{t}</span>
           <span style={{background:c,color:"#fff",borderRadius:20,padding:"2px 10px",fontWeight:800,fontSize:12}}>{p}</span>
@@ -1430,12 +1532,12 @@ function RulesTab() {
       ))}
     </>},
     {icon:"📊",title:"Max Points Reference",color:"#006064",body:<>
-      {[["🏆 Winner","1×20","20"],["🥈 Runner-Up","1×12","12"],["🥉 3rd Place","1×8","8"],["⚽ Golden Boot","1×15","15"],["🎖 Golden Ball","1×15","15"],["🎯 Exact Scores","104×8","832"],["✅ Correct Results","104×3","312"],["👥 Qualifiers","24×2","48"]].map(([c,v,m])=>(
+      {[["🏆 Winner","1×20","20"],["🥈 Runner-Up","1×12","12"],["🥉 3rd Place","1×8","8"],["⚽ Golden Boot","1×15","15"],["🎖 Golden Ball","1×15","15"],["🧤 Golden Glove","1×12","12"],["🎯 Exact Scores","104×8","832"],["✅ Correct Results","104×3","312"],["👥 Qualifiers","24×2","48"]].map(([c,v,m])=>(
         <div key={c} style={{display:"flex",padding:"6px 10px",background:"#fafafa",borderRadius:8,marginBottom:4,fontSize:13}}>
           <span style={{flex:1,fontWeight:600}}>{c}</span><span style={{color:"#888",minWidth:60}}>{v}</span><span style={{fontWeight:800,color:"#1B5E20",minWidth:50,textAlign:"right"}}>{m} pts</span>
         </div>
       ))}
-      <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:900,fontSize:15,textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 950 pts</div>
+      <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:900,fontSize:15,textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 962 pts</div>
     </>},
     {icon:"🌍",title:"Timezone Setup",color:"#01579B",body:<>
       <p style={S.rp}>All match times are stored in <strong>Eastern Time (ET)</strong> — the host country time zone. You can set your own timezone so all dates and times display correctly for your location.</p>
@@ -1492,7 +1594,7 @@ function RulesTab() {
 function AdminResults({data,update,toast_}) {
   const [filter,setFilter]=useState("All");
   const [form,setForm]=useState({});
-  const [tForm,setTForm]=useState({_winner:data.matchActuals._winner||"",_runnerUp:data.matchActuals._runnerUp||"",_thirdPlace:data.matchActuals._thirdPlace||"",_goldenBoot:data.matchActuals._goldenBoot||"",_goldenBall:data.matchActuals._goldenBall||""});
+  const [tForm,setTForm]=useState({_winner:data.matchActuals._winner||"",_runnerUp:data.matchActuals._runnerUp||"",_thirdPlace:data.matchActuals._thirdPlace||"",_goldenBoot:data.matchActuals._goldenBoot||"",_goldenBall:data.matchActuals._goldenBall||"",_goldenGlove:data.matchActuals._goldenGlove||""});
   const filtered=filter==="All"?MATCHES:MATCHES.filter(m=>m.stage===filter);
 
   return (
@@ -1500,8 +1602,8 @@ function AdminResults({data,update,toast_}) {
       <h2 style={S.h2}>⚙️ Enter Results</h2>
       <div style={S.card}>
         <div style={S.blockTitle}>🏅 Tournament Awards</div>
-        {[{k:"_winner",l:"🏆 Winner"},{k:"_runnerUp",l:"🥈 Runner-Up"},{k:"_thirdPlace",l:"🥉 3rd Place"},{k:"_goldenBoot",l:"⚽ Golden Boot"},{k:"_goldenBall",l:"🎖 Golden Ball"}].map(f=>{
-          const isText = f.k==="_goldenBoot"||f.k==="_goldenBall";
+        {[{k:"_winner",l:"🏆 Winner"},{k:"_runnerUp",l:"🥈 Runner-Up"},{k:"_thirdPlace",l:"🥉 3rd Place"},{k:"_goldenBoot",l:"⚽ Golden Boot"},{k:"_goldenBall",l:"🎖 Golden Ball"},{k:"_goldenGlove",l:"🧤 Golden Glove"}].map(f=>{
+          const isText = f.k==="_goldenBoot"||f.k==="_goldenBall"||f.k==="_goldenGlove";
           return (
           <div key={f.k} style={{marginBottom:10}}>
             <label style={S.lbl}>{f.l}</label>
