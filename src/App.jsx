@@ -162,13 +162,53 @@ const fmtAllTimes = t => ({
   cest: fmtTZ(t, 6)   + " CEST",
   ist:  fmtTZ(t, 9.5) + " IST",
 });
+
+// ─── TIMEZONE SYSTEM ─────────────────────────────────────────────────────────
+const TIMEZONES = [
+  { id:"ET",   label:"ET — Eastern Time (USA)",          offset:0,    abbr:"ET"   },
+  { id:"CT",   label:"CT — Central Time (USA)",          offset:-1,   abbr:"CT"   },
+  { id:"MT",   label:"MT — Mountain Time (USA)",         offset:-2,   abbr:"MT"   },
+  { id:"PT",   label:"PT — Pacific Time (USA)",          offset:-3,   abbr:"PT"   },
+  { id:"BST",  label:"BST — British Summer Time (UK)",   offset:5,    abbr:"BST"  },
+  { id:"CEST", label:"CEST — Central European Summer",   offset:6,    abbr:"CEST" },
+  { id:"GST",  label:"GST — Gulf Standard Time (UAE)",   offset:8,    abbr:"GST"  },
+  { id:"IST",  label:"IST — India Standard Time",        offset:9.5,  abbr:"IST"  },
+  { id:"SGT",  label:"SGT — Singapore / Malaysia Time",  offset:12,   abbr:"SGT"  },
+  { id:"AEDT", label:"AEDT — Australian Eastern Summer", offset:15,   abbr:"AEDT" },
+];
+
+// Convert ET date+time to player's timezone, returns { time, date, abbr, dayShift }
+function convertToTZ(etDate, etTime, tzId) {
+  const tz = TIMEZONES.find(t=>t.id===tzId) || TIMEZONES[0];
+  const [h,m] = etTime.split(":").map(Number);
+  const totalMins = h*60 + m + Math.round(tz.offset*60);
+  const dayShift = totalMins < 0 ? -1 : totalMins >= 24*60 ? 1 : 0;
+  const newH = ((Math.floor(totalMins/60)) % 24 + 24) % 24;
+  const newM = ((totalMins % 60) + 60) % 60;
+  const timeStr = `${newH%12||12}:${String(newM).padStart(2,"0")}${newH>=12?"PM":"AM"} ${tz.abbr}`;
+
+  // Shift date if needed
+  let date = etDate;
+  if (dayShift !== 0) {
+    const d = new Date(etDate+"T12:00:00");
+    d.setDate(d.getDate() + dayShift);
+    date = d.toISOString().slice(0,10);
+  }
+  const dateStr = new Date(date+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",weekday:"short"});
+  return { time:timeStr, date:dateStr, rawDate:date, abbr:tz.abbr, dayShift };
+}
+
+// Get a player's preferred timezone (default ET)
+function getPlayerTZ(data, player) {
+  return data?.playerTimezones?.[player] || "ET";
+}
 const fmtDate = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",weekday:"short"});
 const fmtShort = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
 const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.length] || "#888";
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // Storage handled by Firebase (see firebase.js)
-const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{} });
+const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{}, playerTimezones:{} });
 
 // ─── TIME BADGES COMPONENT ────────────────────────────────────────────────────
 function TimeBadges({time, inline=false}) {
@@ -302,6 +342,8 @@ export default function App() {
     localStorage.removeItem("wc2026_player"); localStorage.removeItem("wc2026_isAdmin");
   };
 
+  const playerTZ = getPlayerTZ(data, player);
+
   return (
     <div style={{fontFamily:"'Trebuchet MS',sans-serif",background:"#F0F4F0",minHeight:"100vh",display:"flex"}}>
       {/* Responsive Nav — sidebar on desktop, bottom on mobile */}
@@ -329,16 +371,16 @@ export default function App() {
         {/* Content — extra bottom padding on mobile to clear the bottom nav */}
         <div style={{padding:"16px 16px 90px",flex:1,overflowY:"auto"}}>
           <div style={{maxWidth:860,margin:"0 auto"}}>
-            {tab==="home"          && <HomeTab ranked={ranked} scores={scores} player={player} upcoming={upcoming} recentResults={recentResults} data={data} isAdmin={isAdmin} stageInfo={stageInfo}/>}
+            {tab==="home"          && <HomeTab ranked={ranked} scores={scores} player={player} upcoming={upcoming} recentResults={recentResults} data={data} isAdmin={isAdmin} stageInfo={stageInfo} playerTZ={playerTZ}/>}
             {tab==="leaderboard"   && <Leaderboard ranked={ranked} scores={scores} player={player} data={data}/>}
             {tab==="dashboard"     && <Dashboard ranked={ranked} scores={scores} player={player} data={data} isAdmin={isAdmin}/>}
             {tab==="predictions"   && !isAdmin && <PredictionsTab player={player} data={data} update={update} toast_={toast_} stageInfo={stageInfo}/>}
-            {tab==="matches"       && !isAdmin && <MatchesTab player={player} data={data} update={update} toast_={toast_} matchFilter={matchFilter} setMatchFilter={setMatchFilter}/>}
+            {tab==="matches"       && !isAdmin && <MatchesTab player={player} data={data} update={update} toast_={toast_} matchFilter={matchFilter} setMatchFilter={setMatchFilter} playerTZ={playerTZ}/>}
             {tab==="qualifiers"    && !isAdmin && <PlayerQualifiers player={player} data={data} update={update} toast_={toast_}/>}
             {tab==="profile"       && !isAdmin && <PlayerProfile player={player} data={data} update={update} toast_={toast_}/>}
             {tab==="h2h"           && <H2HTab ranked={ranked} scores={scores} data={data} h2hA={h2hA} setH2hA={setH2hA} h2hB={h2hB} setH2hB={setH2hB}/>}
             {tab==="groups"        && <GroupsTab/>}
-            {tab==="schedule"      && <ScheduleTab data={data}/>}
+            {tab==="schedule"      && <ScheduleTab data={data} playerTZ={playerTZ}/>}
             {tab==="rules"         && <RulesTab/>}
             {tab==="admin_results" && isAdmin && <AdminResults data={data} update={update} toast_={toast_}/>}
             {tab==="admin_qualifiers" && isAdmin && <AdminQualifiers data={data} update={update} toast_={toast_}/>}
@@ -591,15 +633,14 @@ function MobileOnly({children}) {
 const sBtn={background:"#1B5E20",color:"#fff",border:"none",borderRadius:8,padding:"10px 16px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"};
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
-function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stageInfo}) {
+function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stageInfo,playerTZ}) {
   const myScore = scores[player];
   const myRank = ranked.findIndex(([n])=>n===player)+1;
   const leader = ranked[0];
   const gap = leader&&player&&leader[0]!==player ? leader[1].total - (myScore?.total||0) : 0;
   const totalPlayed = MATCHES.filter(m=>data.matchActuals[m.id]?.score).length;
   const remaining = MATCHES.length - totalPlayed;
-
-  // Match of the day = next upcoming big match
+  const tz = playerTZ || "ET";
   const motd = upcoming[0];
 
   return (
@@ -655,34 +696,40 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
       )}
 
       {/* Match of the Day */}
-      {motd && (
-        <div style={{background:"linear-gradient(135deg,#B71C1C,#880E4F)",borderRadius:14,padding:16,marginBottom:16,color:"#fff"}}>
-          <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2,opacity:.7,marginBottom:6}}>⚡ Next Match</div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-            <div style={{fontWeight:900,fontSize:16,flex:1}}>{motd.home}</div>
-            <div style={{background:"rgba(255,255,255,.2)",borderRadius:8,padding:"6px 12px",fontWeight:900,fontSize:13}}>VS</div>
-            <div style={{fontWeight:900,fontSize:16,flex:1,textAlign:"right"}}>{motd.away}</div>
+      {motd && (()=>{
+        const converted = convertToTZ(motd.date, motd.time, tz);
+        return (
+          <div style={{background:"linear-gradient(135deg,#B71C1C,#880E4F)",borderRadius:14,padding:16,marginBottom:16,color:"#fff"}}>
+            <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2,opacity:.7,marginBottom:6}}>⚡ Next Match</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+              <div style={{fontWeight:900,fontSize:16,flex:1}}>{motd.home}</div>
+              <div style={{background:"rgba(255,255,255,.2)",borderRadius:8,padding:"6px 12px",fontWeight:900,fontSize:13}}>VS</div>
+              <div style={{fontWeight:900,fontSize:16,flex:1,textAlign:"right"}}>{motd.away}</div>
+            </div>
+            <div style={{marginTop:8,fontSize:12,opacity:.8}}>📅 {converted.date} · ⏰ {converted.time} · 📍 {motd.city}</div>
+            {converted.dayShift!==0&&<div style={{fontSize:10,opacity:.6,marginTop:2}}>⚠️ Date shifted from ET</div>}
+            <div style={{marginTop:4,fontSize:11,opacity:.6}}>{motd.venue}</div>
           </div>
-          <div style={{marginTop:8,fontSize:12,opacity:.8}}>📅 {fmtDate(motd.date)} · 📍 {motd.city}</div>
-          <TimeBadges time={motd.time}/>
-          <div style={{marginTop:4,fontSize:11,opacity:.6}}>{motd.venue}</div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Upcoming */}
       {upcoming.length>0 && (
         <div style={{background:"#fff",borderRadius:14,padding:16,marginBottom:16,boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
-          <div style={S.blockTitle}>📅 Upcoming Matches</div>
-          {upcoming.slice(0,5).map(m=>(
-            <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid #f5f5f5"}}>
-              <div style={{background:STAGE_COLORS[m.stage]||"#333",color:"#fff",borderRadius:6,padding:"2px 6px",fontSize:10,fontWeight:700,minWidth:24,textAlign:"center"}}>{m.id}</div>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:700,fontSize:13}}>{m.home} <span style={{color:"#ccc",fontWeight:400}}>vs</span> {m.away}</div>
-                <div style={{fontSize:11,color:"#888"}}>{fmtDate(m.date)} · <TimeBadges time={m.time} inline/></div>
+          <div style={S.blockTitle}>📅 Upcoming Matches <span style={{fontSize:11,color:"#888",fontWeight:400}}>({TIMEZONES.find(t=>t.id===tz)?.abbr||"ET"})</span></div>
+          {upcoming.slice(0,5).map(m=>{
+            const c = convertToTZ(m.date, m.time, tz);
+            return (
+              <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid #f5f5f5"}}>
+                <div style={{background:STAGE_COLORS[m.stage]||"#333",color:"#fff",borderRadius:6,padding:"2px 6px",fontSize:10,fontWeight:700,minWidth:24,textAlign:"center"}}>{m.id}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:13}}>{m.home} <span style={{color:"#ccc",fontWeight:400}}>vs</span> {m.away}</div>
+                  <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time}{c.dayShift!==0&&" ⚠️"}</div>
+                </div>
+                <div style={{fontSize:10,color:"#888",textAlign:"right"}}>{m.city}</div>
               </div>
-              <div style={{fontSize:10,color:"#888",textAlign:"right"}}>{m.city}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1101,7 +1148,9 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
 }
 
 // ─── MATCHES TAB ──────────────────────────────────────────────────────────────
-function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter}) {
+function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter,playerTZ}) {
+  const tz = playerTZ||"ET";
+  const tzLabel = TIMEZONES.find(t=>t.id===tz)?.abbr||"ET";
   const stages=["All",...Object.keys(STAGE_COLORS)];
   const filtered=matchFilter==="All"?MATCHES:MATCHES.filter(m=>m.stage===matchFilter);
   const setPred=(matchId,val)=>{ update(d=>{d.matchPredictions[`${player}_${matchId}`]=val;return d;}); };
@@ -1113,7 +1162,7 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter}) {
 
   return (
     <div style={S.sec}>
-      <h2 style={S.h2}>⚽ Match Predictions</h2>
+      <h2 style={S.h2}>⚽ Match Predictions <span style={{fontSize:13,color:"#888",fontWeight:400}}>({tzLabel})</span></h2>
       <div style={{display:"flex",gap:8,marginBottom:12,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
         {[["⚽ Total Pts",totalPts],["🎯 Exact Scores",exactCount],["📝 Predicted",MATCHES.filter(m=>data.matchPredictions[`${player}_${m.id}`]).length]].map(([l,v])=>(
           <div key={l} style={{flex:1,textAlign:"center"}}><div style={{fontWeight:900,fontSize:20,color:"#1A5C2E"}}>{v}</div><div style={{fontSize:10,color:"#888"}}>{l}</div></div>
@@ -1129,13 +1178,13 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter}) {
           const pred=data.matchPredictions[`${player}_${m.id}`]||"";
           const pts=actual&&pred?calcMatchPts(actual,pred):null;
           const sc=STAGE_COLORS[m.stage]||"#333";
+          const c=convertToTZ(m.date,m.time,tz);
           return (
             <div key={m.id} style={{background:"#fff",borderRadius:12,padding:"12px 14px",boxShadow:"0 1px 4px rgba(0,0,0,.07)"}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:6,flexWrap:"wrap"}}>
                 <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0}}>{m.stage}</div>
-                <div style={{fontSize:11,color:"#888"}}>{fmtDate(m.date)} · {m.city}</div>
+                <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&" ⚠️"}</div>
                 {locked2&&!actual&&<div style={{marginLeft:"auto",fontSize:10,color:"#aaa"}}>🔒 Locked</div>}
-                <div style={{width:"100%"}}><TimeBadges time={m.time}/></div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                 <span style={{fontWeight:800,fontSize:14,flex:1}}>{m.home}</span>
@@ -1195,13 +1244,15 @@ function GroupsTab() {
 }
 
 // ─── SCHEDULE TAB ─────────────────────────────────────────────────────────────
-function ScheduleTab({data}) {
+function ScheduleTab({data,playerTZ}) {
   const [filter,setFilter]=useState("All");
+  const tz = playerTZ||"ET";
+  const tzLabel = TIMEZONES.find(t=>t.id===tz)?.abbr||"ET";
   const filtered=filter==="All"?MATCHES:MATCHES.filter(m=>m.stage===filter);
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>📅 Full Schedule</h2>
-      <p style={{color:"#888",fontSize:12,marginBottom:10}}>All 104 matches · ET · BST · CEST · IST</p>
+      <p style={{color:"#888",fontSize:12,marginBottom:10}}>All 104 matches · Times in <strong>{tzLabel}</strong></p>
       <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>
         {["All",...Object.keys(STAGE_COLORS)].map(s=><button key={s} style={{...S.chip,...(filter===s?S.chipActive:{})}} onClick={()=>setFilter(s)}>{s}</button>)}
       </div>
@@ -1210,14 +1261,14 @@ function ScheduleTab({data}) {
           const r=data.matchActuals[m.id];
           const sc=STAGE_COLORS[m.stage]||"#333";
           const locked2=isLocked(m);
+          const c=convertToTZ(m.date,m.time,tz);
           return (
             <div key={m.id} style={{background:"#fff",borderRadius:10,padding:"10px 12px",boxShadow:"0 1px 3px rgba(0,0,0,.06)",display:"flex",gap:8,alignItems:"center"}}>
               <div style={{background:sc,color:"#fff",borderRadius:6,padding:"3px 7px",fontSize:11,fontWeight:700,minWidth:26,textAlign:"center"}}>{m.id}</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13}}>{m.home} <span style={{opacity:.4}}>vs</span> {m.away}</div>
-                <div style={{fontSize:11,color:"#888",marginBottom:3}}>{fmtDate(m.date)} · {m.city}</div>
-                <TimeBadges time={m.time}/>
-                {r&&<div style={{fontSize:11,color:"#1B5E20",fontWeight:700,marginTop:4}}>{r.score} · {r.winner}</div>}
+                <div style={{fontSize:11,color:"#888",marginBottom:1}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&<span style={{color:"#E65100"}}> ⚠️ date shifted</span>}</div>
+                {r&&<div style={{fontSize:11,color:"#1B5E20",fontWeight:700,marginTop:2}}>{r.score} · {r.winner}</div>}
               </div>
               <div style={{fontSize:10,color:locked2?"#aaa":"#4CAF50",fontWeight:700}}>{locked2?"🔒":"⏳"}</div>
             </div>
@@ -1283,6 +1334,22 @@ function RulesTab() {
         </div>
       ))}
       <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:900,fontSize:15,textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 950 pts</div>
+    </>},
+    {icon:"🌍",title:"Timezone Setup",color:"#01579B",body:<>
+      <p style={S.rp}>All match times are stored in <strong>Eastern Time (ET)</strong> — the host country time zone. You can set your own timezone so all dates and times display correctly for your location.</p>
+      <div style={{background:"#E3F2FD",borderRadius:8,padding:"10px 12px",fontSize:13,color:"#01579B",marginBottom:10}}>
+        💡 <strong>Set your timezone in the 👤 Profile tab.</strong> It takes effect immediately across the whole app — match schedule, upcoming games, and home screen.
+      </div>
+      <p style={S.rp}>Supported timezones:</p>
+      {TIMEZONES.map(t=>(
+        <div key={t.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",background:"#fafafa",borderRadius:8,marginBottom:4,fontSize:13}}>
+          <span style={{fontWeight:700,minWidth:50,color:"#01579B"}}>{t.abbr}</span>
+          <span style={{flex:1,color:"#333"}}>{t.label.split("—")[1]?.trim()||t.label}</span>
+        </div>
+      ))}
+      <div style={{background:"#FFF3E0",borderRadius:8,padding:"8px 12px",fontSize:12,marginTop:8}}>
+        ⚠️ <strong>Date shifts:</strong> Some matches may fall on a different calendar date in your timezone compared to ET. Where this happens, a ⚠️ indicator is shown next to the date. If you don't set a timezone, <strong>ET is used by default</strong>.
+      </div>
     </>},
   ];
   return (
@@ -1388,10 +1455,10 @@ function PlayerProfile({player,data,update,toast_}) {
   const [form,setForm]=useState({current:"",next:"",confirm:""});
   const [err,setErr]=useState("");
   const passwords = data?.playerPasswords||{};
+  const currentTZ = getPlayerTZ(data,player);
 
   function changePassword() {
     setErr("");
-    const adminPw = data?.adminPassword||ADMIN_PASSWORD;
     const isAdminOverride = form.current===ADMIN_PASSWORD||(data?.adminPassword&&form.current===data.adminPassword);
     if (!isAdminOverride && form.current !== passwords[player]) {
       setErr("Current password is incorrect."); return;
@@ -1403,9 +1470,16 @@ function PlayerProfile({player,data,update,toast_}) {
     toast_("Password updated ✅");
   }
 
+  function saveTZ(tzId) {
+    update(d=>{ d.playerTimezones=d.playerTimezones||{}; d.playerTimezones[player]=tzId; return d; });
+    toast_(`Timezone set to ${tzId} ✅`);
+  }
+
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>👤 My Profile</h2>
+
+      {/* Account info */}
       <div style={S.card}>
         <div style={S.blockTitle}>Account</div>
         <div style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #f5f5f5",marginBottom:16}}>
@@ -1414,10 +1488,35 @@ function PlayerProfile({player,data,update,toast_}) {
           </div>
           <div>
             <div style={{fontWeight:800,fontSize:16}}>{player}</div>
-            <div style={{fontSize:12,color:"#888"}}>Player account</div>
+            <div style={{fontSize:12,color:"#888"}}>Player account · {TIMEZONES.find(t=>t.id===currentTZ)?.abbr||"ET"}</div>
           </div>
         </div>
 
+        {/* Timezone selector */}
+        <div style={S.blockTitle}>🌍 My Timezone</div>
+        <p style={{fontSize:13,color:"#555",marginBottom:10,lineHeight:1.6}}>
+          Choose your timezone. All match dates and times will be shown in your local time throughout the app.
+        </p>
+        <select style={{...S.sel,marginBottom:8}} value={currentTZ} onChange={e=>saveTZ(e.target.value)}>
+          {TIMEZONES.map(t=>(
+            <option key={t.id} value={t.id}>{t.label}</option>
+          ))}
+        </select>
+        {/* Preview current time for a known match */}
+        {(()=>{
+          const sample = MATCHES[0];
+          const c = convertToTZ(sample.date, sample.time, currentTZ);
+          return (
+            <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#1B5E20"}}>
+              ✅ Preview: Match #1 (Mexico vs South Africa) → <strong>{c.date} at {c.time}</strong>
+              {c.dayShift!==0&&<span style={{color:"#E65100"}}> ⚠️ date differs from ET</span>}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Change password */}
+      <div style={S.card}>
         <div style={S.blockTitle}>🔑 Change Password</div>
         <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
           You can also use the <strong>admin password</strong> as your current password if you've forgotten yours.
