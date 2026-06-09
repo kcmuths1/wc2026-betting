@@ -317,3 +317,29 @@ export async function syncAllResults(currentData) {
 
   return { newData, summary };
 }
+
+// ─── FIFA RANKINGS ────────────────────────────────────────────────────────────
+// Returns { teamName: rankNumber } for all WC2026 teams
+export async function fetchFIFARankings() {
+  const data = await apiFetch(`/teams/rankings/fifa?season=${SEASON}`);
+  const rankings = {};
+  const NAME_MAP_RANKINGS = {
+    "United States":      "USA",
+    "Korea Republic":     "South Korea",
+    "Bosnia Herzegovina": "Bosnia & Herz.",
+    "Bosnia":             "Bosnia & Herz.",
+    "Côte d'Ivoire":      "Ivory Coast",
+    "Curacao":            "Curaçao",
+    "Turkey":             "Türkiye",
+    "Turkiye":            "Türkiye",
+    "Congo DR":           "DR Congo",
+  };
+  const normR = n => NAME_MAP_RANKINGS[n] || n;
+
+  for (const entry of data.response || []) {
+    const name = normR(entry.team?.name || "");
+    const rank = entry.ranking;
+    if (name && rank) rankings[name] = rank;
+  }
+  return rankings;
+}
