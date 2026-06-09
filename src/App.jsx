@@ -149,6 +149,19 @@ const calcMatchPts = (actual,pred) => { const a=parseScore(actual),p=parseScore(
 const isLocked = m => { const[h,mn]=m.time.split(":").map(Number); return new Date()>=new Date(`${m.date}T${String(h).padStart(2,"0")}:${String(mn).padStart(2,"0")}:00`); };
 const getCurrentStage = () => { const now=new Date(); for(const d of DEDUCTIONS){if(now<new Date(d.before))return d;} return DEDUCTIONS[DEDUCTIONS.length-1]; };
 const fmt12 = t => { const[h,m]=t.split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")}${h>=12?"PM":"AM"} ET`; };
+const fmtTZ = (t, offsetHrs) => {
+  const[h,m]=t.split(":").map(Number);
+  const totalMins = h*60 + m + Math.round(offsetHrs*60);
+  const newH = ((Math.floor(totalMins/60)) % 24 + 24) % 24;
+  const newM = ((totalMins % 60) + 60) % 60;
+  return `${newH%12||12}:${String(newM).padStart(2,"0")}${newH>=12?"PM":"AM"}`;
+};
+const fmtAllTimes = t => ({
+  et:   fmt12(t),
+  bst:  fmtTZ(t, 5)   + " BST",
+  cest: fmtTZ(t, 6)   + " CEST",
+  ist:  fmtTZ(t, 9.5) + " IST",
+});
 const fmtDate = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",weekday:"short"});
 const fmtShort = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
 const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.length] || "#888";
@@ -156,6 +169,27 @@ const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.le
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // Storage handled by Firebase (see firebase.js)
 const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140 });
+
+// ─── TIME BADGES COMPONENT ────────────────────────────────────────────────────
+function TimeBadges({time, inline=false}) {
+  const tz = fmtAllTimes(time);
+  if (inline) {
+    return (
+      <span style={{fontSize:11,color:"#888"}}>
+        {tz.et} · {tz.bst} · {tz.cest} · {tz.ist}
+      </span>
+    );
+  }
+  return (
+    <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:4}}>
+      {[["ET",tz.et,"#1B5E20"],["BST",tz.bst,"#01579B"],["CEST",tz.cest,"#4A148C"],["IST",tz.ist,"#E65100"]].map(([label,val,color])=>(
+        <span key={label} style={{background:color,color:"#fff",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>
+          {val}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 // ─── SCORE ENGINE ─────────────────────────────────────────────────────────────
 function calcScores(data) {
@@ -427,7 +461,8 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
             <div style={{background:"rgba(255,255,255,.2)",borderRadius:8,padding:"6px 12px",fontWeight:900,fontSize:13}}>VS</div>
             <div style={{fontWeight:900,fontSize:16,flex:1,textAlign:"right"}}>{motd.away}</div>
           </div>
-          <div style={{marginTop:8,fontSize:12,opacity:.8}}>📅 {fmtDate(motd.date)} · ⏰ {fmt12(motd.time)} · 📍 {motd.city}</div>
+          <div style={{marginTop:8,fontSize:12,opacity:.8}}>📅 {fmtDate(motd.date)} · 📍 {motd.city}</div>
+          <TimeBadges time={motd.time}/>
           <div style={{marginTop:4,fontSize:11,opacity:.6}}>{motd.venue}</div>
         </div>
       )}
@@ -441,7 +476,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
               <div style={{background:STAGE_COLORS[m.stage]||"#333",color:"#fff",borderRadius:6,padding:"2px 6px",fontSize:10,fontWeight:700,minWidth:24,textAlign:"center"}}>{m.id}</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13}}>{m.home} <span style={{color:"#ccc",fontWeight:400}}>vs</span> {m.away}</div>
-                <div style={{fontSize:11,color:"#888"}}>{fmtDate(m.date)} · {fmt12(m.time)}</div>
+                <div style={{fontSize:11,color:"#888"}}>{fmtDate(m.date)} · <TimeBadges time={m.time} inline/></div>
               </div>
               <div style={{fontSize:10,color:"#888",textAlign:"right"}}>{m.city}</div>
             </div>
@@ -894,10 +929,11 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter}) {
           const sc=STAGE_COLORS[m.stage]||"#333";
           return (
             <div key={m.id} style={{background:"#fff",borderRadius:12,padding:"12px 14px",boxShadow:"0 1px 4px rgba(0,0,0,.07)"}}>
-              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700}}>{m.stage}</div>
-                <div style={{fontSize:11,color:"#888"}}>{fmtDate(m.date)} · {fmt12(m.time)} · {m.city}</div>
+              <div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:6,flexWrap:"wrap"}}>
+                <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0}}>{m.stage}</div>
+                <div style={{fontSize:11,color:"#888"}}>{fmtDate(m.date)} · {m.city}</div>
                 {locked2&&!actual&&<div style={{marginLeft:"auto",fontSize:10,color:"#aaa"}}>🔒 Locked</div>}
+                <div style={{width:"100%"}}><TimeBadges time={m.time}/></div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                 <span style={{fontWeight:800,fontSize:14,flex:1}}>{m.home}</span>
@@ -963,7 +999,7 @@ function ScheduleTab({data}) {
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>📅 Full Schedule</h2>
-      <p style={{color:"#888",fontSize:12,marginBottom:10}}>All 104 matches · Times in ET</p>
+      <p style={{color:"#888",fontSize:12,marginBottom:10}}>All 104 matches · ET · BST · CEST · IST</p>
       <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>
         {["All",...Object.keys(STAGE_COLORS)].map(s=><button key={s} style={{...S.chip,...(filter===s?S.chipActive:{})}} onClick={()=>setFilter(s)}>{s}</button>)}
       </div>
@@ -977,8 +1013,9 @@ function ScheduleTab({data}) {
               <div style={{background:sc,color:"#fff",borderRadius:6,padding:"3px 7px",fontSize:11,fontWeight:700,minWidth:26,textAlign:"center"}}>{m.id}</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13}}>{m.home} <span style={{opacity:.4}}>vs</span> {m.away}</div>
-                <div style={{fontSize:11,color:"#888"}}>{fmtDate(m.date)} · {fmt12(m.time)} · {m.city}</div>
-                {r&&<div style={{fontSize:11,color:"#1B5E20",fontWeight:700,marginTop:2}}>{r.score} · {r.winner}</div>}
+                <div style={{fontSize:11,color:"#888",marginBottom:3}}>{fmtDate(m.date)} · {m.city}</div>
+                <TimeBadges time={m.time}/>
+                {r&&<div style={{fontSize:11,color:"#1B5E20",fontWeight:700,marginTop:4}}>{r.score} · {r.winner}</div>}
               </div>
               <div style={{fontSize:10,color:locked2?"#aaa":"#4CAF50",fontWeight:700}}>{locked2?"🔒":"⏳"}</div>
             </div>
@@ -1126,6 +1163,7 @@ function AdminResults({data,update,toast_}) {
                   <span style={{fontWeight:700,fontSize:13}}>{m.home} vs {m.away}</span>
                   <span style={{fontSize:11,color:"#888",marginLeft:"auto"}}>{fmtDate(m.date)}</span>
                 </div>
+                <TimeBadges time={m.time}/>
                 <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
                   <div><label style={S.lbl}>Score</label><input style={{...S.inp,width:70,textAlign:"center"}} placeholder="2-1" value={f.score} onChange={e=>setForm(v=>({...v,[m.id]:{...f,score:e.target.value}}))}/></div>
                   <div><label style={S.lbl}>Winner</label><input style={{...S.inp,width:120}} placeholder="Team / Draw" value={f.winner} onChange={e=>setForm(v=>({...v,[m.id]:{...f,winner:e.target.value}}))}/></div>
