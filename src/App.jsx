@@ -337,6 +337,15 @@ export default function App() {
   const [h2hA,setH2hA]=useState("");
   const [h2hB,setH2hB]=useState("");
 
+  // Onboarding pendo — show once per player on first login
+  const onboardKey = `wc2026_onboarded_${player}`;
+  const [showOnboarding,setShowOnboarding]=useState(false);
+  useEffect(()=>{
+    if(!player||isAdmin) return;
+    const seen = localStorage.getItem(onboardKey);
+    if(!seen) setShowOnboarding(true);
+  },[player,isAdmin]);
+
   // Persist session to localStorage whenever player/isAdmin changes
   useEffect(()=>{ localStorage.setItem("wc2026_player", player); },[player]);
   useEffect(()=>{ localStorage.setItem("wc2026_isAdmin", isAdmin); },[isAdmin]);
@@ -452,6 +461,14 @@ export default function App() {
         </div>
       </div>
       {toast && <Toast toast={toast}/>}
+      {showOnboarding && !isAdmin && (
+        <OnboardingModal
+          player={player}
+          onClose={()=>{ localStorage.setItem(onboardKey,"1"); setShowOnboarding(false); }}
+          onGoTo={(t)=>{ localStorage.setItem(onboardKey,"1"); setShowOnboarding(false); setTab(t); }}
+          tournamentStarted={new Date()>=new Date("2026-06-11T15:00:00")}
+        />
+      )}
     </div>
   );
 }
@@ -1489,9 +1506,9 @@ function ScheduleTab({data,playerTZ}) {
             <div key={m.id} style={{background:T.bgCard,borderRadius:10,padding:"10px 12px",border:"1px solid rgba(255,255,255,0.06)",display:"flex",gap:8,alignItems:"center"}}>
               <div style={{background:sc,color:"#fff",borderRadius:6,padding:"3px 7px",fontSize:11,fontWeight:700,minWidth:26,textAlign:"center"}}>{m.id}</div>
               <div style={{flex:1}}>
-                <div style={{fontWeight:700,fontSize:13,color:isPlaceholder?"#aaa":"#000"}}>
-                  {home} <span style={{opacity:.4}}>vs</span> {away}
-                  {isPlaceholder&&<span style={{fontSize:10,color:"#475569",marginLeft:6}}>(TBD)</span>}
+                <div style={{fontWeight:700,fontSize:13,color:isPlaceholder?T.textMute:T.text}}>
+                  {home} <span style={{color:T.textMute,opacity:.6}}>vs</span> {away}
+                  {isPlaceholder&&<span style={{fontSize:10,color:T.textMute,marginLeft:6}}>(TBD)</span>}
                 </div>
                 <div style={{fontSize:11,color:"#64748b",marginBottom:1}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&<span style={{color:"#E65100"}}> ⚠️ date shifted</span>}</div>
                 {r&&<div style={{fontSize:11,color:"#22c55e",fontWeight:700,marginTop:2}}>{r.score} · {r.winner}</div>}
@@ -1862,22 +1879,22 @@ function PlayerQualifiers({player,data,update,toast_}) {
     <div style={S.sec}>
       <h2 style={S.h2}>👥 Group Qualifier Predictions</h2>
       {/* Stats bar */}
-      <div style={{display:"flex",gap:8,marginBottom:12,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+      <div style={{display:"flex",gap:8,marginBottom:12,background:T.bgCard,borderRadius:12,padding:12,border:"1px solid rgba(255,255,255,0.07)"}}>
         {[["👥 Picks Made",`${totalPicks}/${maxPicks}`],["✅ Pts Earned",ptsSoFar],["💰 Max Possible",maxPicks*2]].map(([l,v])=>(
           <div key={l} style={{flex:1,textAlign:"center"}}>
-            <div style={{fontWeight:900,fontSize:18,color:"#22c55e"}}>{v}</div>
-            <div style={{fontSize:10,color:"#64748b"}}>{l}</div>
+            <div style={{fontWeight:900,fontSize:18,color:T.gold}}>{v}</div>
+            <div style={{fontSize:10,color:T.textDim}}>{l}</div>
           </div>
         ))}
       </div>
 
       {locked && (
-        <div style={{background:"#FFF3E0",border:"1px solid #FFB74D",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13}}>
-          🔒 Group stage has started — predictions are locked. Results will be marked by admin after June 27.
+        <div style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#fca5a5"}}>
+          🔒 Group stage has started — predictions are locked. Results auto-update when admin syncs scores.
         </div>
       )}
       {!locked && (
-        <div style={{background:"#E8F5E9",border:"1px solid #A5D6A7",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#22c55e"}}>
+        <div style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.25)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.green}}>
           ⏰ Pick <strong>2 teams per group</strong> that you think will advance. Locks at tournament start (Jun 11). Worth <strong>2 pts each</strong>, max 48 pts.
         </div>
       )}
@@ -1907,9 +1924,9 @@ function PlayerQualifiers({player,data,update,toast_}) {
                       </div>
                       <select
                         style={{...S.sel,
-                          borderColor: qual===true?"#4CAF50":qual===false?"#ef5350":pick?"#1B5E20":"#e0e0e0",
-                          background: qual===true?"#E8F5E9":qual===false?"#FFEBEE":"#fff",
-                          color: locked?"#888":"#000",
+                          borderColor: qual===true?"#22c55e":qual===false?"#ef4444":pick?T.gold:"rgba(255,255,255,0.15)",
+                          background: qual===true?"rgba(34,197,94,0.12)":qual===false?"rgba(239,68,68,0.12)":T.bgCard2,
+                          color: locked?T.textMute:T.text,
                         }}
                         value={pick}
                         disabled={locked}
@@ -1918,8 +1935,8 @@ function PlayerQualifiers({player,data,update,toast_}) {
                         <option value="">— Select team —</option>
                         {teams.map(t=><option key={t} value={t}>{t}</option>)}
                       </select>
-                      {qual===true && <div style={{fontSize:11,color:"#4CAF50",fontWeight:700,marginTop:3}}>✅ Qualified! +2 pts</div>}
-                      {qual===false && <div style={{fontSize:11,color:"#ef5350",fontWeight:700,marginTop:3}}>❌ Did not qualify</div>}
+                      {qual===true && <div style={{fontSize:11,color:T.green,fontWeight:700,marginTop:3}}>✅ Qualified! +2 pts</div>}
+                      {qual===false && <div style={{fontSize:11,color:T.red,fontWeight:700,marginTop:3}}>❌ Did not qualify</div>}
                     </div>
                   );
                 })}
@@ -2306,6 +2323,182 @@ function AdminSettings({data,update,toast_}) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ONBOARDING MODAL ────────────────────────────────────────────────────────
+function OnboardingModal({player,onClose,onGoTo,tournamentStarted}) {
+  const [step,setStep]=useState(0);
+
+  const steps=[
+    {
+      icon:"🏆",
+      title:"Welcome to WC 2026!",
+      subtitle:`Hey ${player}! Before you start, here's what you need to do.`,
+      color:T.gold,
+      body:(
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {[
+            ["🔮","Tournament Predictions","Pick Winner, Runner-Up, 3rd Place, Golden Boot, Ball & Glove — worth the most points!","predictions"],
+            ["👥","Group Qualifiers","Pick 2 teams to advance from each of 12 groups — 24 picks, 2 pts each","qualifiers"],
+            ["⚽","Match Predictions","Predict scores for each match before kickoff — enter them as you go","matches"],
+          ].map(([ic,t,d,tab])=>(
+            <div key={t} style={{display:"flex",gap:12,alignItems:"flex-start",background:T.bgCard2,borderRadius:10,padding:"10px 12px",border:"1px solid rgba(255,255,255,0.07)"}}>
+              <span style={{fontSize:22,flexShrink:0}}>{ic}</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,color:T.text,fontSize:14}}>{t}</div>
+                <div style={{fontSize:12,color:T.textDim,marginTop:2}}>{d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      icon:"🔮",
+      title:"Step 1 — Tournament Predictions",
+      subtitle:"These are your biggest point earners. Enter them NOW before Jun 11!",
+      color:"#f0c040",
+      body:(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {[
+            ["🏆","Tournament Winner","20 pts — the big one"],
+            ["🥈","Runner-Up","12 pts"],
+            ["🥉","3rd Place","8 pts"],
+            ["⚽","Golden Boot","15 pts — top scorer"],
+            ["🎖","Golden Ball","15 pts — best player"],
+            ["🧤","Golden Glove","12 pts — best goalkeeper"],
+          ].map(([ic,t,d])=>(
+            <div key={t} style={{display:"flex",alignItems:"center",gap:10,background:T.bgCard2,borderRadius:8,padding:"8px 12px"}}>
+              <span style={{fontSize:16}}>{ic}</span>
+              <span style={{flex:1,fontWeight:600,color:T.text,fontSize:13}}>{t}</span>
+              <span style={{fontSize:11,color:T.gold,fontWeight:700}}>{d}</span>
+            </div>
+          ))}
+          {!tournamentStarted&&(
+            <div style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#fca5a5",marginTop:4}}>
+              ⚠️ These lock on <strong>Jun 11 at 3:00 PM ET</strong>. Changes after that cost points!
+            </div>
+          )}
+        </div>
+      ),
+      action:{label:"Go to Predictions →",tab:"predictions"},
+    },
+    {
+      icon:"👥",
+      title:"Step 2 — Group Qualifiers",
+      subtitle:"Pick 2 teams to advance from each of the 12 groups.",
+      color:T.green,
+      body:(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{background:T.bgCard2,borderRadius:10,padding:"12px 14px",fontSize:13,color:T.textDim,lineHeight:1.7}}>
+            There are <strong style={{color:T.text}}>12 groups (A–L)</strong>, each with 4 teams. The top 2 from each group advance. You pick which 2 you think will go through — <strong style={{color:T.gold}}>2 pts per correct pick</strong>, up to <strong style={{color:T.gold}}>48 pts total</strong>.
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+            {["A","B","C","D","E","F","G","H","I","J","K","L"].map(g=>(
+              <div key={g} style={{background:T.bgCard2,borderRadius:8,padding:"6px 10px",fontSize:12,color:T.textDim,textAlign:"center"}}>
+                Group {g} · {GROUPS[g]?.length||4} teams
+              </div>
+            ))}
+          </div>
+          {!tournamentStarted&&(
+            <div style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#fca5a5"}}>
+              ⚠️ Also locks on <strong>Jun 11</strong> — do this before the tournament starts!
+            </div>
+          )}
+        </div>
+      ),
+      action:{label:"Go to Group Qualifiers →",tab:"qualifiers"},
+    },
+    {
+      icon:"✅",
+      title:"You're all set!",
+      subtitle:"One last thing — make sure to enter match predictions before each kickoff.",
+      color:T.green,
+      body:(
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{background:T.bgCard2,borderRadius:10,padding:"12px 14px",fontSize:13,color:T.textDim,lineHeight:1.7}}>
+            For each match you can predict the exact score — <strong style={{color:T.gold}}>8 pts</strong> for exact, <strong style={{color:T.gold}}>3 pts</strong> for correct result (W/D/L). Predictions lock at kickoff time.
+          </div>
+          <div style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:10,padding:"12px 14px",fontSize:13,color:T.green,lineHeight:1.7}}>
+            🏆 <strong>Good luck!</strong> May the best Villa win!<br/>
+            <span style={{fontSize:11,color:T.textDim}}>Check the 📖 Rules tab anytime for the full scoring guide.</span>
+          </div>
+        </div>
+      ),
+      action:{label:"Start Predicting →",tab:"predictions"},
+    },
+  ];
+
+  const cur = steps[step];
+  const isLast = step===steps.length-1;
+
+  return (
+    <div style={{
+      position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",
+      display:"flex",alignItems:"center",justifyContent:"center",
+      zIndex:9998,padding:16,
+    }}>
+      <div style={{
+        background:T.bgCard,borderRadius:20,padding:"28px 24px",
+        maxWidth:440,width:"100%",
+        border:`1px solid ${cur.color}40`,
+        boxShadow:`0 0 60px ${cur.color}20, 0 24px 60px rgba(0,0,0,0.6)`,
+        maxHeight:"90vh",overflowY:"auto",
+      }}>
+        {/* Progress dots */}
+        <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:20}}>
+          {steps.map((_,i)=>(
+            <div key={i} style={{
+              width:i===step?20:6,height:6,borderRadius:999,
+              background:i===step?cur.color:T.bgCard2,
+              transition:"all .2s",
+            }}/>
+          ))}
+        </div>
+
+        {/* Icon + title */}
+        <div style={{textAlign:"center",marginBottom:16}}>
+          <div style={{fontSize:44,lineHeight:1,marginBottom:8}}>{cur.icon}</div>
+          <div style={{fontWeight:900,fontSize:18,color:T.text,marginBottom:4}}>{cur.title}</div>
+          <div style={{fontSize:13,color:T.textDim,lineHeight:1.5}}>{cur.subtitle}</div>
+        </div>
+
+        {/* Body */}
+        <div style={{marginBottom:20}}>{cur.body}</div>
+
+        {/* Actions */}
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {cur.action&&(
+            <button
+              style={{...S.btn,background:`linear-gradient(135deg,${cur.color},${cur.color}bb)`,color:"#111",fontWeight:800}}
+              onClick={()=>onGoTo(cur.action.tab)}
+            >
+              {cur.action.label}
+            </button>
+          )}
+          <div style={{display:"flex",gap:8}}>
+            {step>0&&(
+              <button style={{...S.btn,background:T.bgCard2,color:T.textDim,flex:1}} onClick={()=>setStep(s=>s-1)}>
+                ← Back
+              </button>
+            )}
+            {isLast?(
+              <button style={{...S.btn,background:T.bgCard2,color:T.textDim,flex:1}} onClick={onClose}>
+                Close
+              </button>
+            ):(
+              <button style={{...S.btn,background:T.bgCard2,color:T.textDim,flex:1}} onClick={()=>setStep(s=>s+1)}>
+                Next →
+              </button>
+            )}
+          </div>
+          <button style={{background:"none",border:"none",color:T.textMute,fontSize:12,cursor:"pointer",padding:4}} onClick={onClose}>
+            Skip intro
+          </button>
+        </div>
       </div>
     </div>
   );
