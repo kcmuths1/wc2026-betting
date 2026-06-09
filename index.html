@@ -5,6 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WC 2026 Betting Tracker</title>
     <meta name="description" content="FIFA World Cup 2026 Friends Betting Tracker" />
+    <!-- Nunito — sporty, rounded, highly legible. Only 2 weights loaded. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body, #root { height: 100%; }
+      body {
+        background: #0f1923;
+        color: #f1f5f9;
+        font-family: 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* Scrollbar styling */
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: #111c2a; }
+      ::-webkit-scrollbar-thumb { background: rgba(240,192,64,0.3); border-radius: 99px; }
+      /* Input placeholder colour */
+      ::placeholder { color: rgba(255,255,255,0.3) !important; }
+      /* Select option dark bg */
+      option { background: #1a2535; color: #f1f5f9; }
+      /* Smooth transitions on interactive elements */
+      button { transition: opacity .15s, transform .1s; }
+      button:active { transform: scale(0.97); }
+    </style>
   </head>
   <body>
     <div id="root"></div>
