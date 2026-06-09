@@ -224,9 +224,9 @@ function calcScores(data) {
 export default function App() {
   const [data,setData]=useState(null);
   const [loading,setLoading]=useState(true);
-  const [player,setPlayer]=useState("");
+  const [player,setPlayer]=useState(()=>localStorage.getItem("wc2026_player")||"");
   const [playerInput,setPlayerInput]=useState("");
-  const [isAdmin,setIsAdmin]=useState(false);
+  const [isAdmin,setIsAdmin]=useState(()=>localStorage.getItem("wc2026_isAdmin")==="true");
   const [adminInput,setAdminInput]=useState("");
   const [tab,setTab]=useState("home");
   const [matchFilter,setMatchFilter]=useState("All");
@@ -234,6 +234,10 @@ export default function App() {
   const [toast,setToast]=useState(null);
   const [h2hA,setH2hA]=useState("");
   const [h2hB,setH2hB]=useState("");
+
+  // Persist session to localStorage whenever player/isAdmin changes
+  useEffect(()=>{ localStorage.setItem("wc2026_player", player); },[player]);
+  useEffect(()=>{ localStorage.setItem("wc2026_isAdmin", isAdmin); },[isAdmin]);
 
   useEffect(()=>{
     loadData().then(d=>{ setData(d||initData()); setLoading(false); });
@@ -294,7 +298,10 @@ export default function App() {
 
   return (
     <div style={S.app}>
-      <Header player={player} isAdmin={isAdmin} saving={saving} stageInfo={stageInfo} onLogout={()=>{setPlayer("");setIsAdmin(false);setAdminInput("");setPlayerInput("");setTab("home");}}/>
+      <Header player={player} isAdmin={isAdmin} saving={saving} stageInfo={stageInfo} onLogout={()=>{
+        setPlayer(""); setIsAdmin(false); setAdminInput(""); setPlayerInput(""); setTab("home");
+        localStorage.removeItem("wc2026_player"); localStorage.removeItem("wc2026_isAdmin");
+      }}/>
       <BottomNav tabs={tabs} tab={tab} setTab={setTab}/>
       <div style={S.content}>
         {tab==="home"          && <HomeTab ranked={ranked} scores={scores} player={player} upcoming={upcoming} recentResults={recentResults} data={data} isAdmin={isAdmin} stageInfo={stageInfo}/>}
