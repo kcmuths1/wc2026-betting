@@ -268,15 +268,15 @@ function Countdown({etDate, etTime}) {
 function getPredictionResult(score, home, away) {
   const p = parseScore(score);
   if (!p) return null;
-  if (p.h === p.a) return { label:"Draw 🤝", detail:"You've predicted a draw", color:"#37474F", bg:"#ECEFF1" };
-  if (p.h > p.a)  return { label:`${home} to win`, detail:`You've predicted ${home} win ${p.h}–${p.a}`, color:"#1B5E20", bg:"#E8F5E9" };
-  return           { label:`${away} to win`, detail:`You've predicted ${away} win ${p.a}–${p.h}`, color:"#01579B", bg:"#E3F2FD" };
+  if (p.h === p.a) return { label:"Draw 🤝", detail:"You've predicted a draw", color:"#94a3b8", bg:"#ECEFF1" };
+  if (p.h > p.a)  return { label:`${home} to win`, detail:`You've predicted ${home} win ${p.h}–${p.a}`, color:"#22c55e", bg:"#E8F5E9" };
+  return           { label:`${away} to win`, detail:`You've predicted ${away} win ${p.a}–${p.h}`, color:"#60a5fa", bg:"#E3F2FD" };
 }
 function TimeBadges({time, inline=false}) {
   const tz = fmtAllTimes(time);
   if (inline) {
     return (
-      <span style={{fontSize:11,color:"#888"}}>
+      <span style={{fontSize:11,color:"#64748b"}}>
         {tz.et} · {tz.bst} · {tz.cest} · {tz.ist}
       </span>
     );
@@ -857,7 +857,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
               </div>
             );
           })}
-          <div style={{fontSize:11,color:"#999",marginTop:8}}>Max pts still available from match predictions: {remaining * POINTS.exactScore}</div>
+          <div style={{fontSize:11,color:"#64748b",marginTop:8}}>Max pts still available from match predictions: {remaining * POINTS.exactScore}</div>
         </div>
       )}
 
@@ -883,7 +883,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
       {/* Upcoming */}
       {upcoming.length>0 && (
         <div style={{background:T.bgCard,border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:16,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,.25)"}}>
-          <div style={S.blockTitle}>📅 Upcoming Matches <span style={{fontSize:11,color:"#888",fontWeight:400}}>({TIMEZONES.find(t=>t.id===tz)?.abbr||"ET"})</span></div>
+          <div style={S.blockTitle}>📅 Upcoming Matches <span style={{fontSize:11,color:"#64748b",fontWeight:400}}>({TIMEZONES.find(t=>t.id===tz)?.abbr||"ET"})</span></div>
           {upcoming.slice(0,5).map(m=>{
             const c = convertToTZ(m.date, m.time, tz);
             const { home, away } = getMatchTeams(m, data);
@@ -891,10 +891,10 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
               <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
                 <div style={{background:STAGE_COLORS[m.stage]||"#333",color:"#fff",borderRadius:6,padding:"2px 6px",fontSize:10,fontWeight:700,minWidth:24,textAlign:"center"}}>{m.id}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13,color:T.text}}>{home} <span style={{color:T.textMute,fontWeight:400}}>vs</span> {away}</div>
-                  <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time}{c.dayShift!==0&&" ⚠️"}</div>
+                  <div style={{fontWeight:700,fontSize:13,color:T.text}}>{home} <span style={{color:"#475569",fontWeight:400}}>vs</span> {away}</div>
+                  <div style={{fontSize:11,color:"#64748b"}}>{c.date} · {c.time}{c.dayShift!==0&&" ⚠️"}</div>
                 </div>
-                <div style={{fontSize:10,color:"#888",textAlign:"right"}}>{m.city}</div>
+                <div style={{fontSize:10,color:"#64748b",textAlign:"right"}}>{m.city}</div>
               </div>
             );
           })}
@@ -910,8 +910,8 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
             return (
               <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
                 <div style={{background:STAGE_COLORS[m.stage]||"#333",color:"#fff",borderRadius:6,padding:"2px 6px",fontSize:10,fontWeight:700}}>{m.id}</div>
-                <div style={{flex:1,fontSize:13,fontWeight:600}}>{m.home} <span style={{color:"#22c55e",fontWeight:900,background:"rgba(34,197,94,0.12)",padding:"1px 6px",borderRadius:4}}>{r?.score}</span> {m.away}</div>
-                {r?.winner&&<div style={{fontSize:11,color:"#1B5E20",fontWeight:700}}>⚽ {r.winner}</div>}
+                <div style={{flex:1,fontSize:13,fontWeight:600,color:"#f1f5f9"}}>{m.home} <span style={{color:"#22c55e",fontWeight:900,background:"rgba(34,197,94,0.12)",padding:"1px 6px",borderRadius:4}}>{r?.score}</span> {m.away}</div>
+                {r?.winner&&<div style={{fontSize:11,color:"#22c55e",fontWeight:700}}>⚽ {r.winner}</div>}
               </div>
             );
           })}
@@ -950,10 +950,10 @@ function Leaderboard({ranked,scores,player,data}) {
                     {isMe&&<span style={{background:"rgba(34,197,94,0.2)",color:"#22c55e",border:"1px solid rgba(34,197,94,0.3)",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}}>you</span>}
                     {payout&&<span style={{marginLeft:"auto",fontSize:12,fontWeight:700,color:"#E65100"}}>{payout}</span>}
                   </div>
-                  <div style={{display:"flex",gap:8,fontSize:11,color:"#888"}}>
+                  <div style={{display:"flex",gap:8,fontSize:11,color:"#64748b"}}>
                     <span>🔮 {s.predPts}</span><span>⚽ {s.matchPts}</span><span>👥 {s.qualPts}</span>
                     {s.ded>0&&<span style={{color:"#ef5350"}}>−{s.ded}</span>}
-                    <span style={{marginLeft:"auto",fontWeight:700,color:"#555"}}>🎯 {s.exactCount} exact · ✅ {s.resultCount} correct</span>
+                    <span style={{marginLeft:"auto",fontWeight:700,color:"#94a3b8"}}>🎯 {s.exactCount} exact · ✅ {s.resultCount} correct</span>
                   </div>
                 </div>
                 <div style={{fontWeight:900,fontSize:24,background:"linear-gradient(90deg,#f0c040,#f9a825)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",minWidth:44,textAlign:"right"}}>{s.total}</div>
@@ -1049,20 +1049,20 @@ function Dashboard({ranked,scores,player,data,isAdmin}) {
                 <div key={d.name} style={{background:d.name===player?"#F1F8F1":"#fafafa",borderRadius:10,padding:"10px 14px",border:`1px solid ${d.name===player?"#4CAF50":"#eee"}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <span style={{fontWeight:700,color:d.color}}>{d.name}</span>
-                    <span style={{fontSize:12,color:"#888"}}>{d.result}% correct results · {d.exact}% exact</span>
+                    <span style={{fontSize:12,color:"#64748b"}}>{d.result}% correct results · {d.exact}% exact</span>
                   </div>
                   <div style={{background:"#e0e0e0",borderRadius:999,height:8,overflow:"hidden",position:"relative"}}>
                     <div style={{width:`${d.result}%`,height:"100%",background:d.color,opacity:.4,borderRadius:999,position:"absolute"}}/>
                     <div style={{width:`${d.exact}%`,height:"100%",background:d.color,borderRadius:999,position:"absolute"}}/>
                   </div>
-                  <div style={{display:"flex",gap:12,fontSize:11,color:"#999",marginTop:4}}>
+                  <div style={{display:"flex",gap:12,fontSize:11,color:"#64748b",marginTop:4}}>
                     <span>🎯 {d.exact}% exact scores</span><span>✅ {d.result}% any correct</span>
                   </div>
                 </div>
               ))}
             </div>
           )}
-          <div style={{fontSize:11,color:"#bbb",marginTop:10,textAlign:"center"}}>Dark bar = exact score · Light bar = correct result (W/D/L)</div>
+          <div style={{fontSize:11,color:"#475569",marginTop:10,textAlign:"center"}}>Dark bar = exact score · Light bar = correct result (W/D/L)</div>
         </div>
       )}
 
@@ -1088,10 +1088,10 @@ function Dashboard({ranked,scores,player,data,isAdmin}) {
             {categoryData.map(d=>(
               <div key={d.name} style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>
                 <div style={{width:10,height:10,borderRadius:"50%",background:d.color,flexShrink:0}}/>
-                <span style={{minWidth:70,fontWeight:600}}>{d.name}</span>
+                <span style={{minWidth:70,fontWeight:600,color:"#e2e8f0"}}>{d.name}</span>
                 <span style={{color:"#FFD700",fontWeight:700,minWidth:50}}>🔮 {d.predPts}</span>
-                <span style={{color:"#1B5E20",fontWeight:700,minWidth:50}}>⚽ {d.matchPts}</span>
-                <span style={{color:"#01579B",fontWeight:700}}>👥 {d.qualPts}</span>
+                <span style={{color:"#22c55e",fontWeight:700,minWidth:50}}>⚽ {d.matchPts}</span>
+                <span style={{color:"#60a5fa",fontWeight:700}}>👥 {d.qualPts}</span>
               </div>
             ))}
           </div>
@@ -1138,7 +1138,7 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
             {allPlayers.filter(p=>p!==h2hB).map(p=><option key={p} value={p}>{p}</option>)}
           </select>
         </div>
-        <div style={{display:"flex",alignItems:"flex-end",padding:"0 4px 8px",fontWeight:900,color:"#888"}}>VS</div>
+        <div style={{display:"flex",alignItems:"flex-end",padding:"0 4px 8px",fontWeight:900,color:"#64748b"}}>VS</div>
         <div style={{flex:1}}>
           <label style={S.lbl}>Player B</label>
           <select style={S.sel} value={h2hB} onChange={e=>setH2hB(e.target.value)}>
@@ -1181,7 +1181,7 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
                 <div key={l} style={{marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:600,marginBottom:3}}>
                     <span style={{color:a>=b?playerColor(h2hA):"#999",fontWeight:a>=b?800:400}}>{a}{unit}</span>
-                    <span style={{color:"#888"}}>{l}</span>
+                    <span style={{color:"#64748b"}}>{l}</span>
                     <span style={{color:b>=a?playerColor(h2hB):"#999",fontWeight:b>=a?800:400}}>{b}{unit}</span>
                   </div>
                   <div style={{display:"flex",gap:2,height:8}}>
@@ -1208,7 +1208,7 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
                 <div key={f.key} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:13}}>
                   <span style={{minWidth:20}}>{f.label.split(" ")[0]}</span>
                   <span style={{flex:1,fontWeight:700,color:playerColor(h2hA),textAlign:"right"}}>{va}</span>
-                  <span style={{background:match?"#E8F5E9":"#f5f5f5",borderRadius:6,padding:"2px 8px",fontSize:11,color:match?"#1B5E20":"#999",fontWeight:600}}>{match?"🤝 Same":"vs"}</span>
+                  <span style={{background:match?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.05)",borderRadius:6,padding:"2px 8px",fontSize:11,color:match?"#22c55e":"#475569",fontWeight:600}}>{match?"🤝 Same":"vs"}</span>
                   <span style={{flex:1,fontWeight:700,color:playerColor(h2hB)}}>{vb}</span>
                 </div>
               );
@@ -1221,15 +1221,15 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
               <div style={S.blockTitle}>⚽ Match-by-Match Record</div>
               <div style={{display:"flex",justifyContent:"space-around",textAlign:"center",marginBottom:12}}>
                 {[[h2hA,matchWinsA,playerColor(h2hA)],["Draws",matchDraws,"#888"],[h2hB,matchWinsB,playerColor(h2hB)]].map(([l,v,c])=>(
-                  <div key={l}><div style={{fontSize:28,fontWeight:900,color:c}}>{v}</div><div style={{fontSize:11,color:"#888"}}>{l}</div></div>
+                  <div key={l}><div style={{fontSize:28,fontWeight:900,color:c}}>{v}</div><div style={{fontSize:11,color:"#64748b"}}>{l}</div></div>
                 ))}
               </div>
               <div style={{maxHeight:200,overflowY:"auto"}}>
                 {matchComparison.slice(0,20).map(({m,actual,predAScore,predBScore,ptsA,ptsB})=>(
                   <div key={m.id} style={{display:"flex",gap:6,padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:11,alignItems:"center"}}>
-                    <span style={{color:"#888",minWidth:28}}>#{m.id}</span>
+                    <span style={{color:"#64748b",minWidth:28}}>#{m.id}</span>
                     <span style={{flex:1,color:ptsA>ptsB?playerColor(h2hA):"#999",fontWeight:ptsA>ptsB?700:400}}>{predAScore||"—"} ({ptsA}pt)</span>
-                    <span style={{color:"#1B5E20",fontWeight:700,background:"#E8F5E9",padding:"1px 5px",borderRadius:4}}>{actual}</span>
+                    <span style={{color:"#22c55e",fontWeight:700,background:"#E8F5E9",padding:"1px 5px",borderRadius:4}}>{actual}</span>
                     <span style={{flex:1,textAlign:"right",color:ptsB>ptsA?playerColor(h2hB):"#999",fontWeight:ptsB>ptsA?700:400}}>{predBScore||"—"} ({ptsB}pt)</span>
                   </div>
                 ))}
@@ -1254,9 +1254,9 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
     {key:"winner",label:"🏆 Tournament Winner",pts:20,color:"#FFD700"},
     {key:"runnerUp",label:"🥈 Runner-Up",pts:12,color:"#C0C0C0"},
     {key:"thirdPlace",label:"🥉 3rd Place",pts:8,color:"#CD7F32"},
-    {key:"goldenBoot",label:"⚽ Golden Boot",pts:15,color:"#1B5E20"},
-    {key:"goldenBall",label:"🎖 Golden Ball",pts:15,color:"#4A148C"},
-    {key:"goldenGlove",label:"🧤 Golden Glove",pts:12,color:"#01579B"},
+    {key:"goldenBoot",label:"⚽ Golden Boot",pts:15,color:"#22c55e"},
+    {key:"goldenBall",label:"🎖 Golden Ball",pts:15,color:"#c084fc"},
+    {key:"goldenGlove",label:"🧤 Golden Glove",pts:12,color:"#60a5fa"},
   ];
 
   function save() {
@@ -1312,7 +1312,7 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
         })}
       </div>
       {changed&&<button style={S.btn} onClick={save}>💾 Save Predictions</button>}
-      {!changed&&pred.winner&&<div style={{color:"#2E7D32",fontWeight:700,fontSize:14,textAlign:"center",padding:8}}>✅ Predictions saved</div>}
+      {!changed&&pred.winner&&<div style={{color:"#22c55e",fontWeight:700,fontSize:14,textAlign:"center",padding:8}}>✅ Predictions saved</div>}
     </div>
   );
 }
@@ -1332,10 +1332,10 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter,player
 
   return (
     <div style={S.sec}>
-      <h2 style={S.h2}>⚽ Match Predictions <span style={{fontSize:13,color:"#888",fontWeight:400}}>({tzLabel})</span></h2>
+      <h2 style={S.h2}>⚽ Match Predictions <span style={{fontSize:13,color:"#64748b",fontWeight:400}}>({tzLabel})</span></h2>
       <div style={{display:"flex",gap:8,marginBottom:12,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
         {[["⚽ Total Pts",totalPts],["🎯 Exact Scores",exactCount],["📝 Predicted",MATCHES.filter(m=>data.matchPredictions[`${player}_${m.id}`]).length]].map(([l,v])=>(
-          <div key={l} style={{flex:1,textAlign:"center"}}><div style={{fontWeight:900,fontSize:20,color:"#1A5C2E"}}>{v}</div><div style={{fontSize:10,color:"#888"}}>{l}</div></div>
+          <div key={l} style={{flex:1,textAlign:"center"}}><div style={{fontWeight:900,fontSize:20,color:"#22c55e"}}>{v}</div><div style={{fontSize:10,color:"#64748b"}}>{l}</div></div>
         ))}
       </div>
       <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>
@@ -1389,8 +1389,8 @@ function MatchCard({m, player, data, setPred, tz}) {
       {/* Header row */}
       <div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:4,flexWrap:"wrap"}}>
         <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0}}>{m.stage}</div>
-        <div style={{fontSize:11,color:"#888"}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&" ⚠️"}</div>
-        {locked2&&!actual&&<div style={{marginLeft:"auto",fontSize:10,color:"#aaa"}}>🔒 Locked</div>}
+        <div style={{fontSize:11,color:"#64748b"}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&" ⚠️"}</div>
+        {locked2&&!actual&&<div style={{marginLeft:"auto",fontSize:10,color:"#475569"}}>🔒 Locked</div>}
       </div>
 
       {/* Countdown */}
@@ -1406,7 +1406,7 @@ function MatchCard({m, player, data, setPred, tz}) {
       {/* Input row */}
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
         <div style={{flex:1}}>
-          <div style={{fontSize:10,color:"#888",marginBottom:3}}>Your prediction</div>
+          <div style={{fontSize:10,color:"#64748b",marginBottom:3}}>Your prediction</div>
           <input
             style={{border:`2px solid ${locked2?"#e0e0e0":localVal?"#4CAF50":"#e0e0e0"}`,borderRadius:8,padding:"7px 10px",fontSize:14,fontWeight:700,width:70,textAlign:"center",outline:"none",background:locked2?"#f9f9f9":"#fff",color:locked2?"#aaa":"#000"}}
             placeholder="2-1"
@@ -1418,8 +1418,8 @@ function MatchCard({m, player, data, setPred, tz}) {
         </div>
         {actual&&(
           <div style={{textAlign:"center"}}>
-            <div style={{fontSize:10,color:"#888",marginBottom:3}}>Result</div>
-            <div style={{fontWeight:900,fontSize:16,color:"#1B5E20",background:"#E8F5E9",padding:"4px 10px",borderRadius:8}}>{actual}</div>
+            <div style={{fontSize:10,color:"#64748b",marginBottom:3}}>Result</div>
+            <div style={{fontWeight:900,fontSize:16,color:"#22c55e",background:"rgba(34,197,94,0.15)",padding:"4px 10px",borderRadius:8,color:"#22c55e"}}>{actual}</div>
           </div>
         )}
         {pts!==null&&(
@@ -1433,7 +1433,7 @@ function MatchCard({m, player, data, setPred, tz}) {
       {predResult&&(
         <div style={{marginTop:8,background:predResult.bg,borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
           <span style={{fontWeight:800,fontSize:12,color:predResult.color}}>{predResult.label}</span>
-          <span style={{fontSize:11,color:"#666"}}>— {predResult.detail}</span>
+          <span style={{fontSize:11,color:"#94a3b8"}}>— {predResult.detail}</span>
         </div>
       )}
     </div>
@@ -1445,16 +1445,16 @@ function GroupsTab() {
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>🌍 Group Stage Draw</h2>
-      <p style={{color:"#888",fontSize:12,marginBottom:14}}>48 teams · 12 groups · Top 2 + 8 best 3rd-place advance to R32</p>
+      <p style={{color:"#64748b",fontSize:12,marginBottom:14}}>48 teams · 12 groups · Top 2 + 8 best 3rd-place advance to R32</p>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
         {Object.entries(GROUPS).map(([grp,teams])=>(
           <div key={grp} style={{borderRadius:12,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,.35)",border:"1px solid rgba(255,255,255,0.07)"}}>
             <div style={{background:GC[grp],color:"#fff",fontWeight:900,fontSize:13,padding:"8px 12px",letterSpacing:1}}>GROUP {grp}</div>
             {teams.map((t,i)=>(
               <div key={t} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:i%2===0?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.02)",fontSize:13,color:T.text}}>
-                <span style={{color:"#aaa",fontSize:11,width:14}}>{i+1}</span>
-                <span style={{flex:1,fontWeight:600}}>{t}</span>
-                <span style={{fontSize:10,color:"#aaa",fontWeight:600}}>{CONF[t]||""}</span>
+                <span style={{color:"#475569",fontSize:11,width:14}}>{i+1}</span>
+                <span style={{flex:1,fontWeight:600,color:"#e2e8f0"}}>{t}</span>
+                <span style={{fontSize:10,color:"#475569",fontWeight:600}}>{CONF[t]||""}</span>
               </div>
             ))}
           </div>
@@ -1473,7 +1473,7 @@ function ScheduleTab({data,playerTZ}) {
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>📅 Full Schedule</h2>
-      <p style={{color:"#888",fontSize:12,marginBottom:10}}>All 104 matches · Times in <strong>{tzLabel}</strong></p>
+      <p style={{color:"#64748b",fontSize:12,marginBottom:10}}>All 104 matches · Times in <strong>{tzLabel}</strong></p>
       <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>
         {["All",...Object.keys(STAGE_COLORS)].map(s=><button key={s} style={{...S.chip,...(filter===s?S.chipActive:{})}} onClick={()=>setFilter(s)}>{s}</button>)}
       </div>
@@ -1491,10 +1491,10 @@ function ScheduleTab({data,playerTZ}) {
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13,color:isPlaceholder?"#aaa":"#000"}}>
                   {home} <span style={{opacity:.4}}>vs</span> {away}
-                  {isPlaceholder&&<span style={{fontSize:10,color:"#aaa",marginLeft:6}}>(TBD)</span>}
+                  {isPlaceholder&&<span style={{fontSize:10,color:"#475569",marginLeft:6}}>(TBD)</span>}
                 </div>
-                <div style={{fontSize:11,color:"#888",marginBottom:1}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&<span style={{color:"#E65100"}}> ⚠️ date shifted</span>}</div>
-                {r&&<div style={{fontSize:11,color:"#1B5E20",fontWeight:700,marginTop:2}}>{r.score} · {r.winner}</div>}
+                <div style={{fontSize:11,color:"#64748b",marginBottom:1}}>{c.date} · {c.time} · {m.city}{c.dayShift!==0&&<span style={{color:"#E65100"}}> ⚠️ date shifted</span>}</div>
+                {r&&<div style={{fontSize:11,color:"#22c55e",fontWeight:700,marginTop:2}}>{r.score} · {r.winner}</div>}
               </div>
               <div style={{fontSize:10,color:locked2?"#aaa":"#4CAF50",fontWeight:700}}>{locked2?"🔒":"⏳"}</div>
             </div>
@@ -1509,39 +1509,39 @@ function ScheduleTab({data,playerTZ}) {
 function RulesTab() {
   const [open,setOpen]=useState(0);
   const sections=[
-    {icon:"🎯",title:"Overview",color:"#1B5E20",body:<>
+    {icon:"🎯",title:"Overview",color:"#22c55e",body:<>
       <p style={S.rp}>A points-based prediction competition across all 104 matches of FIFA World Cup 2026 (Jun 11 – Jul 19). Three scoring categories:</p>
       {[["🔮","Tournament Predictions","Pick Winner, Runner-Up, 3rd, Golden Boot, Ball & Glove before kick-off"],["⚽","Match Predictions","Predict the score of each match before it kicks off"],["👥","Group Qualifiers","Predict which 2 teams advance from each of 12 groups"]].map(([ic,t,d])=>(
-        <div key={t} style={S.ri}><span style={{fontSize:20}}>{ic}</span><div><strong>{t}</strong><br/><span style={{fontSize:12,color:"#666"}}>{d}</span></div></div>
+        <div key={t} style={S.ri}><span style={{fontSize:20}}>{ic}</span><div><strong>{t}</strong><br/><span style={{fontSize:12,color:"#94a3b8"}}>{d}</span></div></div>
       ))}
     </>},
     {icon:"🏆",title:"Tournament Prediction Points",color:"#E65100",body:<>
       <p style={S.rp}>Enter before <strong>Jun 11, 3:00 PM ET</strong>. Worth the most points.</p>
       {[["🏆","Winner","20 pts","#FFD700"],["🥈","Runner-Up","12 pts","#C0C0C0"],["🥉","3rd Place","8 pts","#CD7F32"],["⚽","Golden Boot","15 pts","#1B5E20"],["🎖","Golden Ball","15 pts","#4A148C"],["🧤","Golden Glove","12 pts","#01579B"]].map(([ic,t,p,c])=>(
-        <div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"8px",background:"#fafafa",borderRadius:8,marginBottom:6}}>
+        <div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"8px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:6}}>
           <span style={{fontSize:18}}>{ic}</span><span style={{flex:1,fontWeight:700}}>{t}</span>
           <span style={{background:c,color:"#fff",borderRadius:20,padding:"2px 10px",fontWeight:800,fontSize:12}}>{p}</span>
         </div>
       ))}
     </>},
-    {icon:"⚽",title:"Match Prediction Points",color:"#01579B",body:<>
+    {icon:"⚽",title:"Match Prediction Points",color:"#60a5fa",body:<>
       <p style={S.rp}>Predict the exact scoreline for any of the 104 matches. Locks at kickoff.</p>
       {[["🎯","Exact Score","Predict precise final score e.g. 2-1","8 pts","#1B5E20"],["✅","Correct Result","Right W/D/L but wrong score","3 pts","#01579B"],["❌","Wrong","Neither correct","0 pts","#aaa"]].map(([ic,t,d,p,c])=>(
-        <div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"8px",background:"#fafafa",borderRadius:8,marginBottom:6}}>
-          <span style={{fontSize:18}}>{ic}</span><div style={{flex:1}}><strong>{t}</strong><br/><span style={{fontSize:12,color:"#666"}}>{d}</span></div>
+        <div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"8px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:6}}>
+          <span style={{fontSize:18}}>{ic}</span><div style={{flex:1}}><strong>{t}</strong><br/><span style={{fontSize:12,color:"#94a3b8"}}>{d}</span></div>
           <span style={{background:c,color:"#fff",borderRadius:20,padding:"2px 10px",fontWeight:800,fontSize:12}}>{p}</span>
         </div>
       ))}
-      <div style={{background:"#E3F2FD",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#01579B",marginTop:6}}>💡 Exact score (8pts) replaces correct result (3pts) — max 8pts per match.</div>
+      <div style={{background:"#E3F2FD",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#60a5fa",marginTop:6}}>💡 Exact score (8pts) replaces correct result (3pts) — max 8pts per match.</div>
     </>},
-    {icon:"👥",title:"Group Qualifier Points",color:"#4A148C",body:<>
+    {icon:"👥",title:"Group Qualifier Points",color:"#c084fc",body:<>
       <p style={S.rp}>Predict 2 teams that advance from each of 12 groups = 24 predictions per player. <strong>2 pts each</strong>, max 48 pts. Admin marks YES/NO after Jun 27.</p>
     </>},
     {icon:"📉",title:"Prediction Changes & Deductions",color:"#B71C1C",body:<>
       <p style={S.rp}>Tournament predictions can be changed after Jun 11 but with a point penalty:</p>
       {DEDUCTIONS.map(d=>(
-        <div key={d.stage} style={{display:"flex",justifyContent:"space-between",padding:"7px 10px",background:"#fafafa",borderRadius:8,marginBottom:4,fontSize:13}}>
-          <span style={{fontWeight:600}}>{d.stage}</span>
+        <div key={d.stage} style={{display:"flex",justifyContent:"space-between",padding:"7px 10px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:4,fontSize:13,color:"#cbd5e1"}}>
+          <span style={{fontWeight:600,color:"#e2e8f0"}}>{d.stage}</span>
           <span style={{color:d.pts===0?"#1B5E20":"#C62828",fontWeight:800}}>{d.label}</span>
         </div>
       ))}
@@ -1550,27 +1550,27 @@ function RulesTab() {
     {icon:"🤝",title:"Tiebreakers",color:"#33691E",body:<>
       <p style={S.rp}>If total points are tied at the end:</p>
       {["1. Most exact scores (8-pt)","2. Most correct results (3-pt)","3. Most correct tournament predictions","4. Most correct group qualifier picks","5. Coin flip / admin's call 🙂"].map((t,i)=>(
-        <div key={i} style={{padding:"6px 10px",background:"#fafafa",borderRadius:8,marginBottom:4,fontSize:13,fontWeight:i===0?700:400}}>{t}</div>
+        <div key={i} style={{padding:"6px 10px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:4,fontSize:13,color:"#cbd5e1",fontWeight:i===0?700:400}}>{t}</div>
       ))}
     </>},
     {icon:"📊",title:"Max Points Reference",color:"#006064",body:<>
       {[["🏆 Winner","1×20","20"],["🥈 Runner-Up","1×12","12"],["🥉 3rd Place","1×8","8"],["⚽ Golden Boot","1×15","15"],["🎖 Golden Ball","1×15","15"],["🧤 Golden Glove","1×12","12"],["🎯 Exact Scores","104×8","832"],["✅ Correct Results","104×3","312"],["👥 Qualifiers","24×2","48"]].map(([c,v,m])=>(
-        <div key={c} style={{display:"flex",padding:"6px 10px",background:"#fafafa",borderRadius:8,marginBottom:4,fontSize:13}}>
-          <span style={{flex:1,fontWeight:600}}>{c}</span><span style={{color:"#888",minWidth:60}}>{v}</span><span style={{fontWeight:800,color:"#1B5E20",minWidth:50,textAlign:"right"}}>{m} pts</span>
+        <div key={c} style={{display:"flex",padding:"6px 10px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:4,fontSize:13,color:"#cbd5e1"}}>
+          <span style={{flex:1,fontWeight:600}}>{c}</span><span style={{color:"#64748b",minWidth:60}}>{v}</span><span style={{fontWeight:800,color:"#22c55e",minWidth:50,textAlign:"right"}}>{m} pts</span>
         </div>
       ))}
       <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:800,fontSize:15,color:"#f1f5f9",textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 962 pts</div>
     </>},
-    {icon:"🌍",title:"Timezone Setup",color:"#01579B",body:<>
+    {icon:"🌍",title:"Timezone Setup",color:"#60a5fa",body:<>
       <p style={S.rp}>All match times are stored in <strong>Eastern Time (ET)</strong> — the host country time zone. You can set your own timezone so all dates and times display correctly for your location.</p>
-      <div style={{background:"#E3F2FD",borderRadius:8,padding:"10px 12px",fontSize:13,color:"#01579B",marginBottom:10}}>
+      <div style={{background:"#E3F2FD",borderRadius:8,padding:"10px 12px",fontSize:13,color:"#60a5fa",marginBottom:10}}>
         💡 <strong>Set your timezone in the 👤 Profile tab.</strong> It takes effect immediately across the whole app — match schedule, upcoming games, and home screen.
       </div>
       <p style={S.rp}>Supported timezones:</p>
       {TIMEZONES.map(t=>(
-        <div key={t.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",background:"#fafafa",borderRadius:8,marginBottom:4,fontSize:13}}>
-          <span style={{fontWeight:700,minWidth:50,color:"#01579B"}}>{t.abbr}</span>
-          <span style={{flex:1,color:"#333"}}>{t.label.split("—")[1]?.trim()||t.label}</span>
+        <div key={t.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:4,fontSize:13,color:"#cbd5e1"}}>
+          <span style={{fontWeight:700,minWidth:50,color:"#60a5fa"}}>{t.abbr}</span>
+          <span style={{flex:1,color:"#cbd5e1"}}>{t.label.split("—")[1]?.trim()||t.label}</span>
         </div>
       ))}
       <div style={{background:"#FFF3E0",borderRadius:8,padding:"8px 12px",fontSize:12,marginTop:8}}>
@@ -1647,10 +1647,10 @@ function AdminResults({data,update,toast_}) {
       {/* AUTO SYNC CARD */}
       <div style={{...S.card,border:"1px solid rgba(34,197,94,0.3)",background:"rgba(34,197,94,0.05)"}}>
         <div style={{...S.blockTitle,color:"#22c55e"}}>🔄 Auto-Sync from API-Football</div>
-        <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
+        <p style={{fontSize:13,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>
           Pulls all completed match results, group standings and top scorer automatically from <strong>api-football.com</strong>. Run this after each matchday — takes about 5 seconds.
         </p>
-        <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#1B5E20",marginBottom:12}}>
+        <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#22c55e",marginBottom:12}}>
           💡 <strong>What gets synced automatically:</strong> All finished match scores · Group qualifier results · Golden Boot (top scorer)<br/>
           📝 <strong>Still manual:</strong> Golden Ball · Golden Glove · Knockout round qualifiers (after R32+)
         </div>
@@ -1665,7 +1665,7 @@ function AdminResults({data,update,toast_}) {
         {/* Sync log */}
         {syncLog && (
           <div style={{marginTop:12,fontSize:12}}>
-            <div style={{fontWeight:700,color:"#1B5E20",marginBottom:4}}>Last sync results:</div>
+            <div style={{fontWeight:700,color:"#22c55e",marginBottom:4}}>Last sync results:</div>
             <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:6}}>
               {[
                 [`⚽ ${syncLog.matchesUpdated} matches updated`,"#1B5E20"],
@@ -1713,11 +1713,11 @@ function AdminResults({data,update,toast_}) {
             const f=form[m.id]||{score:ex?.score||"",winner:ex?.winner||""};
             const sc=STAGE_COLORS[m.stage]||"#333";
             return (
-              <div key={m.id} style={{background:"#fafafa",borderRadius:10,padding:"10px 12px",border:`1px solid ${ex?"#A5D6A7":"#eee"}`}}>
+              <div key={m.id} style={{background:T.bgCard2,borderRadius:10,padding:"10px 12px",border:`1px solid ${ex?"#A5D6A7":"#eee"}`}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
                   <div style={{background:sc,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700}}>#{m.id}</div>
                   <span style={{fontWeight:700,fontSize:13}}>{m.home} vs {m.away}</span>
-                  <span style={{fontSize:11,color:"#888",marginLeft:"auto"}}>{fmtDate(m.date)}</span>
+                  <span style={{fontSize:11,color:"#64748b",marginLeft:"auto"}}>{fmtDate(m.date)}</span>
                 </div>
                 <TimeBadges time={m.time}/>
                 <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
@@ -1727,7 +1727,7 @@ function AdminResults({data,update,toast_}) {
                     {ex?"Update":"Save"}
                   </button>
                 </div>
-                {ex&&<div style={{fontSize:11,color:"#1B5E20",marginTop:4,fontWeight:600}}>✅ {ex.score} · {ex.winner}</div>}
+                {ex&&<div style={{fontSize:11,color:"#22c55e",marginTop:4,fontWeight:600}}>✅ {ex.score} · {ex.winner}</div>}
               </div>
             );
           })}
@@ -1774,14 +1774,14 @@ function PlayerProfile({player,data,update,toast_}) {
             {player[0]?.toUpperCase()}
           </div>
           <div>
-            <div style={{fontWeight:800,fontSize:16}}>{player}</div>
-            <div style={{fontSize:12,color:"#888"}}>Player account · {TIMEZONES.find(t=>t.id===currentTZ)?.abbr||"ET"}</div>
+            <div style={{fontWeight:800,fontSize:16,color:"#f1f5f9"}}>{player}</div>
+            <div style={{fontSize:12,color:"#64748b"}}>Player account · {TIMEZONES.find(t=>t.id===currentTZ)?.abbr||"ET"}</div>
           </div>
         </div>
 
         {/* Timezone selector */}
         <div style={S.blockTitle}>🌍 My Timezone</div>
-        <p style={{fontSize:13,color:"#555",marginBottom:10,lineHeight:1.6}}>
+        <p style={{fontSize:13,color:"#94a3b8",marginBottom:10,lineHeight:1.6}}>
           Choose your timezone. All match dates and times will be shown in your local time throughout the app.
         </p>
         <select style={{...S.sel,marginBottom:8}} value={currentTZ} onChange={e=>saveTZ(e.target.value)}>
@@ -1794,7 +1794,7 @@ function PlayerProfile({player,data,update,toast_}) {
           const sample = MATCHES[0];
           const c = convertToTZ(sample.date, sample.time, currentTZ);
           return (
-            <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#1B5E20"}}>
+            <div style={{background:"#E8F5E9",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#22c55e"}}>
               ✅ Preview: Match #1 (Mexico vs South Africa) → <strong>{c.date} at {c.time}</strong>
               {c.dayShift!==0&&<span style={{color:"#E65100"}}> ⚠️ date differs from ET</span>}
             </div>
@@ -1805,7 +1805,7 @@ function PlayerProfile({player,data,update,toast_}) {
       {/* Change password */}
       <div style={S.card}>
         <div style={S.blockTitle}>🔑 Change Password</div>
-        <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
+        <p style={{fontSize:13,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>
           You can also use the <strong>admin password</strong> as your current password if you've forgotten yours.
         </p>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -1865,8 +1865,8 @@ function PlayerQualifiers({player,data,update,toast_}) {
       <div style={{display:"flex",gap:8,marginBottom:12,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
         {[["👥 Picks Made",`${totalPicks}/${maxPicks}`],["✅ Pts Earned",ptsSoFar],["💰 Max Possible",maxPicks*2]].map(([l,v])=>(
           <div key={l} style={{flex:1,textAlign:"center"}}>
-            <div style={{fontWeight:900,fontSize:18,color:"#1A5C2E"}}>{v}</div>
-            <div style={{fontSize:10,color:"#888"}}>{l}</div>
+            <div style={{fontWeight:900,fontSize:18,color:"#22c55e"}}>{v}</div>
+            <div style={{fontSize:10,color:"#64748b"}}>{l}</div>
           </div>
         ))}
       </div>
@@ -1877,7 +1877,7 @@ function PlayerQualifiers({player,data,update,toast_}) {
         </div>
       )}
       {!locked && (
-        <div style={{background:"#E8F5E9",border:"1px solid #A5D6A7",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#1B5E20"}}>
+        <div style={{background:"#E8F5E9",border:"1px solid #A5D6A7",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#22c55e"}}>
           ⏰ Pick <strong>2 teams per group</strong> that you think will advance. Locks at tournament start (Jun 11). Worth <strong>2 pts each</strong>, max 48 pts.
         </div>
       )}
@@ -1902,7 +1902,7 @@ function PlayerQualifiers({player,data,update,toast_}) {
                   const qual = slot===0?q0:q1;
                   return (
                     <div key={slot}>
-                      <div style={{fontSize:10,color:"#888",marginBottom:3,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>
+                      <div style={{fontSize:10,color:"#64748b",marginBottom:3,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>
                         Pick {slot+1}
                       </div>
                       <select
@@ -1943,16 +1943,16 @@ function AdminQualifiers({data,update,toast_}) {
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>✅ Group Qualifiers</h2>
-      <p style={{color:"#888",fontSize:12,marginBottom:12}}>2 pts per correct pick. Mark YES/NO after Jun 27.</p>
+      <p style={{color:"#64748b",fontSize:12,marginBottom:12}}>2 pts per correct pick. Mark YES/NO after Jun 27.</p>
       {players.length===0 && (
-        <div style={{...S.card,textAlign:"center",color:"#888",padding:24}}>
+        <div style={{...S.card,textAlign:"center",color:"#64748b",padding:24}}>
           No players have joined yet. Players will appear here once they log in and enter predictions.
         </div>
       )}
       {Object.entries(GROUPS).map(([grp,teams])=>(
         <div key={grp} style={{...S.card,marginBottom:10}}>
           <div style={S.blockTitle}>Group {grp} — {teams.join(", ")}</div>
-          {players.length===0 && <div style={{color:"#bbb",fontSize:12,padding:"8px 0"}}>No players yet</div>}
+          {players.length===0 && <div style={{color:"#475569",fontSize:12,padding:"8px 0"}}>No players yet</div>}
           {players.map(p=>(
             <div key={p} style={{display:"grid",gridTemplateColumns:"80px 1fr 70px 1fr 70px",gap:6,alignItems:"center",padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:12}}>
               <span style={{fontWeight:700,fontSize:12}}>{p}</span>
@@ -1961,7 +1961,7 @@ function AdminQualifiers({data,update,toast_}) {
                   <select style={{...S.sel,fontSize:11,padding:"4px 6px"}} value={getT(p,grp,slot)} onChange={e=>setTeam(p,grp,slot,e.target.value)}>
                     <option value="">—</option>{teams.map(t=><option key={t} value={t}>{t}</option>)}
                   </select>
-                  <select style={{...S.sel,fontSize:11,padding:"4px 6px",background:getQ(p,grp,slot)===true?"#C8E6C9":getQ(p,grp,slot)===false?"#FFCDD2":"#fff"}}
+                  <select style={{...S.sel,fontSize:11,padding:"4px 6px",background:getQ(p,grp,slot)===true?"rgba(34,197,94,0.2)":getQ(p,grp,slot)===false?"rgba(239,68,68,0.2)":T.bgCard2}}
                     value={getQ(p,grp,slot)===null?"":getQ(p,grp,slot)?"YES":"NO"}
                     onChange={e=>setQual(p,grp,slot,e.target.value===""?null:e.target.value==="YES")}>
                     <option value="">—</option><option value="YES">✅ YES</option><option value="NO">❌ NO</option>
@@ -1998,11 +1998,11 @@ function AdminDeductions({data,update,toast_,ranked}) {
       </div>
       <div style={S.card}>
         <div style={S.blockTitle}>📝 Change Log</div>
-        {data.changeLog.length===0?<p style={{color:"#bbb",fontSize:13}}>No changes yet.</p>:data.changeLog.map((l,i)=>(
+        {data.changeLog.length===0?<p style={{color:"#475569",fontSize:13}}>No changes yet.</p>:data.changeLog.map((l,i)=>(
           <div key={i} style={{display:"flex",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:12}}>
-            <span style={{color:"#888"}}>{l.date}</span>
+            <span style={{color:"#64748b"}}>{l.date}</span>
             <span style={{fontWeight:700}}>{l.player}</span>
-            <span style={{flex:1,color:"#555"}}>{l.what}</span>
+            <span style={{flex:1,color:"#94a3b8"}}>{l.what}</span>
             <span style={{color:"#ef5350",fontWeight:700}}>−{l.deduction}pts ({l.stage})</span>
           </div>
         ))}
@@ -2011,7 +2011,7 @@ function AdminDeductions({data,update,toast_,ranked}) {
         <div style={S.blockTitle}>📉 Deduction Scale</div>
         {DEDUCTIONS.map(d=>(
           <div key={d.stage} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:13}}>
-            <span style={{fontWeight:600}}>{d.stage}</span>
+            <span style={{fontWeight:600,color:"#e2e8f0"}}>{d.stage}</span>
             <span style={{color:d.pts===0?"#1B5E20":"#ef5350",fontWeight:700}}>{d.label}</span>
           </div>
         ))}
@@ -2141,8 +2141,8 @@ function AdminSettings({data,update,toast_}) {
         <div style={S.blockTitle}>📊 Data Snapshot</div>
         {statRows.map(([l,v])=>(
           <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:13}}>
-            <span style={{color:"#555"}}>{l}</span>
-            <span style={{fontWeight:800,color:"#1A5C2E"}}>{v}</span>
+            <span style={{color:"#94a3b8"}}>{l}</span>
+            <span style={{fontWeight:800,color:"#22c55e"}}>{v}</span>
           </div>
         ))}
       </div>
@@ -2157,7 +2157,7 @@ function AdminSettings({data,update,toast_}) {
             ...Object.keys(data.deductions),
           ])].sort();
           if (players.length === 0) return (
-            <p style={{color:"#bbb",fontSize:13}}>No players have joined yet.</p>
+            <p style={{color:"#475569",fontSize:13}}>No players have joined yet.</p>
           );
           return players.map(p => {
             const matchCount = Object.keys(data.matchPredictions).filter(k=>k.startsWith(p+"_")).length;
@@ -2169,8 +2169,8 @@ function AdminSettings({data,update,toast_}) {
                 <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:playerColor(p),flexShrink:0}}/>
                   <div style={{flex:1}}>
-                    <div style={{fontWeight:700,fontSize:14}}>{p}</div>
-                    <div style={{fontSize:11,color:"#888",marginTop:2,display:"flex",gap:10,flexWrap:"wrap"}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#f1f5f9"}}>{p}</div>
+                    <div style={{fontSize:11,color:"#64748b",marginTop:2,display:"flex",gap:10,flexWrap:"wrap"}}>
                       <span>{hasPreds?"✅ Predictions set":"⭕ No predictions"}</span>
                       <span>⚽ {matchCount} match picks</span>
                       <span>👥 {qualCount} qualifier picks</span>
@@ -2218,10 +2218,10 @@ function AdminSettings({data,update,toast_}) {
       {/* Export */}
       <div style={S.card}>
         <div style={S.blockTitle}>📤 Export Backup</div>
-        <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
+        <p style={{fontSize:13,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>
           Downloads a <code style={{background:"#f5f5f5",padding:"1px 5px",borderRadius:4,fontSize:12}}>.json</code> file of all app data — predictions, scores, qualifiers, deductions, change log. Save this somewhere safe. If the app ever resets, you can restore from it below.
         </p>
-        <div style={{background:"#E8F5E9",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:12,color:"#1B5E20"}}>
+        <div style={{background:"#E8F5E9",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:12,color:"#22c55e"}}>
           💡 <strong>Recommended:</strong> Export after entering each matchday's results. Takes 2 seconds and is your safety net for the whole tournament.
         </div>
         <button style={{...S.btn,background:"#1B5E20",display:"flex",alignItems:"center",justifyContent:"center",gap:8}} onClick={exportBackup}>
@@ -2232,13 +2232,13 @@ function AdminSettings({data,update,toast_}) {
       {/* Import */}
       <div style={S.card}>
         <div style={S.blockTitle}>📥 Restore from Backup</div>
-        <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
+        <p style={{fontSize:13,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>
           Paste the contents of your backup JSON file below, or upload the file directly. This will <strong style={{color:"#C62828"}}>overwrite all current data</strong> — use only to recover after a reset.
         </p>
         <div style={{marginBottom:10}}>
           <label style={S.lbl}>Upload .json file</label>
           <input type="file" accept=".json" onChange={handleFileUpload}
-            style={{fontSize:13,padding:"6px 0",color:"#555",width:"100%"}}/>
+            style={{fontSize:13,padding:"6px 0",color:"#94a3b8",width:"100%"}}/>
         </div>
         <div style={{marginBottom:10}}>
           <label style={S.lbl}>Or paste JSON directly</label>
@@ -2262,7 +2262,7 @@ function AdminSettings({data,update,toast_}) {
       {/* Password change */}
       <div style={S.card}>
         <div style={S.blockTitle}>🔑 Change Admin Password</div>
-        <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
+        <p style={{fontSize:13,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>
           Update the admin password. The new password takes effect immediately and is saved with the app data. <strong>Write it down somewhere</strong> — there's no recovery option.
         </p>
         <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:12}}>
@@ -2284,13 +2284,13 @@ function AdminSettings({data,update,toast_}) {
         </div>
         {pwError && <div style={{background:"#FFEBEE",borderRadius:8,padding:"8px 12px",color:"#C62828",fontSize:13,marginBottom:10}}>❌ {pwError}</div>}
         <button style={{...S.btn,background:"#01579B"}} onClick={changePassword}>🔑 Update Password</button>
-        <div style={{marginTop:8,fontSize:11,color:"#aaa",textAlign:"center"}}>Default password: <code>admin2026</code> — change this before sharing the app</div>
+        <div style={{marginTop:8,fontSize:11,color:"#475569",textAlign:"center"}}>Default password: <code>admin2026</code> — change this before sharing the app</div>
       </div>
 
       {/* Danger zone */}
       <div style={{...S.card,border:"2px solid #FFCDD2"}}>
         <div style={{...S.blockTitle,color:"#C62828",borderBottomColor:"#FFCDD2"}}>⚠️ Danger Zone</div>
-        <p style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.6}}>
+        <p style={{fontSize:13,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>
           Wipe all data and start fresh. This is <strong style={{color:"#C62828"}}>permanent and cannot be undone</strong>. Export a backup first if you want to keep the current data.
         </p>
         {!showConfirmReset ? (
@@ -2392,7 +2392,7 @@ const S = {
     background:T.bgCard2,border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,
     padding:"4px 12px",fontSize:11,cursor:"pointer",fontWeight:600,color:T.textDim,whiteSpace:"nowrap",
   },
-  chipActive:{background:"linear-gradient(135deg,#f0c040,#f9a825)",color:"#111",borderColor:"#f0c040",fontWeight:800},
+  chipActive:{background:"linear-gradient(135deg,#f0c040,#f9a825)",color:"#e2e8f0",borderColor:"#f0c040",fontWeight:800},
   rp:{fontSize:13,color:T.textDim,lineHeight:1.7,marginBottom:10},
   ri:{display:"flex",gap:10,alignItems:"flex-start",background:T.bgCard2,borderRadius:8,padding:"8px 10px",border:"1px solid rgba(255,255,255,0.06)",marginBottom:6},
 };
