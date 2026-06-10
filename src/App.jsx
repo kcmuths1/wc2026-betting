@@ -2,6 +2,44 @@ import { loadData, saveData, subscribeToData } from "./firebase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis } from "recharts";
 
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const T = {
+  bg:       "#0f1923",
+  bgCard:   "#1a2535",
+  bgCard2:  "#212f42",
+  border:   "rgba(255,255,255,0.08)",
+  gold:     "#f0c040",
+  goldDim:  "#b8923a",
+  green:    "#22c55e",
+  greenDim: "#15803d",
+  red:      "#ef4444",
+  blue:     "#3b82f6",
+  text:     "#f1f5f9",
+  textDim:  "#94a3b8",
+  textMute: "#475569",
+  sidebar:  "#111c2a",
+};
+
+// ─── STYLES ───────────────────────────────────────────────────────────────────
+const S = {
+  header:{background:"linear-gradient(90deg,#111c2a 0%,#1a2535 100%)",borderBottom:"1px solid rgba(240,192,64,0.2)",color:"#fff",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,flexShrink:0},
+  sec:{},
+  h2:{fontSize:22,fontWeight:900,background:"linear-gradient(90deg,#f0c040,#f9a825)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",marginBottom:14,marginTop:0,letterSpacing:"-0.5px"},
+  card:{background:T.bgCard,borderRadius:16,padding:16,marginBottom:14,border:"1px solid rgba(255,255,255,0.07)",boxShadow:"0 4px 24px rgba(0,0,0,0.3)"},
+  blockTitle:{fontWeight:800,fontSize:13,color:T.gold,marginBottom:10,paddingBottom:8,borderBottom:"1px solid rgba(240,192,64,0.2)",textTransform:"uppercase",letterSpacing:"0.8px"},
+  empty:{color:T.textMute,textAlign:"center",padding:24,fontSize:14},
+  loginWrap:{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:16},
+  loginCard:{background:"rgba(15,10,30,0.82)",borderRadius:24,padding:"32px 28px",maxWidth:380,width:"100%",boxShadow:"0 24px 60px rgba(0,0,0,.6)",border:"1px solid rgba(255,255,255,0.12)"},
+  lbl:{fontSize:11,fontWeight:700,color:T.textDim,textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4},
+  inp:{border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"11px 14px",fontSize:14,outline:"none",fontFamily:"inherit",width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.07)",color:"#fff"},
+  btn:{background:"linear-gradient(135deg,#22c55e,#15803d)",color:"#fff",border:"none",borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",boxShadow:"0 4px 12px rgba(34,197,94,0.3)"},
+  sel:{width:"100%",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,padding:"9px 10px",fontSize:13,outline:"none",fontFamily:"inherit",cursor:"pointer",boxSizing:"border-box",background:T.bgCard2,color:T.text},
+  chip:{background:T.bgCard2,border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"4px 12px",fontSize:11,cursor:"pointer",fontWeight:600,color:T.textDim,whiteSpace:"nowrap"},
+  chipActive:{background:"linear-gradient(135deg,#f0c040,#f9a825)",color:"#111",borderColor:"#f0c040",fontWeight:800},
+  rp:{fontSize:13,color:T.textDim,lineHeight:1.7,marginBottom:10},
+  ri:{display:"flex",gap:10,alignItems:"flex-start",background:T.bgCard2,borderRadius:8,padding:"8px 10px",border:"1px solid rgba(255,255,255,0.06)",marginBottom:6},
+};
+
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const ADMIN_PASSWORD = "admin2026";
 const FRIENDS = []; // Open — anyone who types their name joins automatically
@@ -2129,10 +2167,10 @@ function PlayerQualifiers({player,data,update,toast_}) {
                         style={{...S.sel,
                           borderColor: qual===true?"#22c55e":qual===false?"#ef4444":pick?T.gold:"rgba(255,255,255,0.15)",
                           background: qual===true?"rgba(34,197,94,0.12)":qual===false?"rgba(239,68,68,0.12)":T.bgCard2,
-                          color: locked?T.textMute:T.text,
+                          color: (isGroupLocked(grp)||tournamentStarted&&!isGroupLocked(grp)===false)?T.text:T.textMute,
                         }}
                         value={pick}
-                        disabled={locked}
+                        disabled={isGroupLocked(grp)}
                         onChange={e=>setTeam(grp,slot,e.target.value)}
                       >
                         <option value="">— Select team —</option>
@@ -2743,75 +2781,4 @@ function Toast({toast}) {
   );
 }
 
-// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
-// Dark stadium theme with gold accents — lightweight CSS only, no external assets
-const T = {
-  bg:       "#0f1923",   // deep navy — stadium night
-  bgCard:   "#1a2535",   // slightly lighter card bg
-  bgCard2:  "#212f42",   // hover / alternate card
-  border:   "rgba(255,255,255,0.08)",
-  gold:     "#f0c040",
-  goldDim:  "#b8923a",
-  green:    "#22c55e",   // accent green
-  greenDim: "#15803d",
-  red:      "#ef4444",
-  blue:     "#3b82f6",
-  text:     "#f1f5f9",
-  textDim:  "#94a3b8",
-  textMute: "#475569",
-  sidebar:  "#111c2a",
-};
 
-// ─── STYLES ───────────────────────────────────────────────────────────────────
-const S = {
-  header:{
-    background:"linear-gradient(90deg,#111c2a 0%,#1a2535 100%)",
-    borderBottom:"1px solid rgba(240,192,64,0.2)",
-    color:"#fff",padding:"10px 16px",display:"flex",alignItems:"center",
-    justifyContent:"space-between",position:"sticky",top:0,zIndex:100,flexShrink:0,
-  },
-  sec:{},
-  h2:{
-    fontSize:22,fontWeight:900,
-    background:"linear-gradient(90deg,#f0c040,#f9a825)",
-    WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
-    backgroundClip:"text",
-    marginBottom:14,marginTop:0,letterSpacing:"-0.5px",
-  },
-  card:{
-    background:T.bgCard,borderRadius:16,padding:16,marginBottom:14,
-    border:"1px solid rgba(255,255,255,0.07)",
-    boxShadow:"0 4px 24px rgba(0,0,0,0.3)",
-  },
-  blockTitle:{
-    fontWeight:800,fontSize:13,color:T.gold,marginBottom:10,paddingBottom:8,
-    borderBottom:"1px solid rgba(240,192,64,0.2)",
-    textTransform:"uppercase",letterSpacing:"0.8px",
-  },
-  empty:{color:T.textMute,textAlign:"center",padding:24,fontSize:14},
-  loginWrap:{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:16},
-  loginCard:{background:"rgba(15,10,30,0.82)",borderRadius:24,padding:"32px 28px",maxWidth:380,width:"100%",boxShadow:"0 24px 60px rgba(0,0,0,.6)",border:"1px solid rgba(255,255,255,0.12)"},
-  lbl:{fontSize:11,fontWeight:700,color:T.textDim,textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4},
-  inp:{
-    border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"11px 14px",
-    fontSize:14,outline:"none",fontFamily:"inherit",width:"100%",boxSizing:"border-box",
-    background:"rgba(255,255,255,0.07)",color:"#fff",
-  },
-  btn:{
-    background:"linear-gradient(135deg,#22c55e,#15803d)",color:"#fff",border:"none",
-    borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",
-    boxShadow:"0 4px 12px rgba(34,197,94,0.3)",
-  },
-  sel:{
-    width:"100%",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,
-    padding:"9px 10px",fontSize:13,outline:"none",fontFamily:"inherit",cursor:"pointer",
-    boxSizing:"border-box",background:T.bgCard2,color:T.text,
-  },
-  chip:{
-    background:T.bgCard2,border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,
-    padding:"4px 12px",fontSize:11,cursor:"pointer",fontWeight:600,color:T.textDim,whiteSpace:"nowrap",
-  },
-  chipActive:{background:"linear-gradient(135deg,#f0c040,#f9a825)",color:"#e2e8f0",borderColor:"#f0c040",fontWeight:800},
-  rp:{fontSize:13,color:T.textDim,lineHeight:1.7,marginBottom:10},
-  ri:{display:"flex",gap:10,alignItems:"flex-start",background:T.bgCard2,borderRadius:8,padding:"8px 10px",border:"1px solid rgba(255,255,255,0.06)",marginBottom:6},
-};
