@@ -266,7 +266,7 @@ const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.le
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // Storage handled by Firebase (see firebase.js)
-const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:140, playerPasswords:{}, playerTimezones:{}, knockoutTeams:{}, teamRankings:{} });
+const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:2000, playerPasswords:{}, playerTimezones:{}, knockoutTeams:{}, teamRankings:{} });
 
 // ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────────
 function useCountdown(etDate, etTime) {
@@ -394,13 +394,11 @@ export default function App() {
   const [h2hA,setH2hA]=useState("");
   const [h2hB,setH2hB]=useState("");
 
-  // Onboarding pendo — show once per player on first login
-  const onboardKey = `wc2026_onboarded_${player}`;
+  // Onboarding pendo — show on every login, skip dismisses for current session only
   const [showOnboarding,setShowOnboarding]=useState(false);
   useEffect(()=>{
     if(!player||isAdmin) return;
-    const seen = localStorage.getItem(onboardKey);
-    if(!seen) setShowOnboarding(true);
+    setShowOnboarding(true);
   },[player,isAdmin]);
 
   // Persist session to localStorage whenever player/isAdmin changes
@@ -521,8 +519,8 @@ export default function App() {
       {showOnboarding && !isAdmin && (
         <OnboardingModal
           player={player}
-          onClose={()=>{ localStorage.setItem(onboardKey,"1"); setShowOnboarding(false); }}
-          onGoTo={(t)=>{ localStorage.setItem(onboardKey,"1"); setShowOnboarding(false); setTab(t); }}
+          onClose={()=>setShowOnboarding(false)}
+          onGoTo={(t)=>{ setShowOnboarding(false); setTab(t); }}
           tournamentStarted={new Date()>=new Date("2026-06-11T15:00:00")}
         />
       )}
@@ -998,7 +996,9 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
 // ─── LEADERBOARD ──────────────────────────────────────────────────────────────
 function Leaderboard({ranked,scores,player,data}) {
   const medals=["🥇","🥈","🥉"];
-  const pot=data.prizePool||140;
+  const BUY_IN = 2000; // ₹ per person
+  const numPlayers = ranked.length || 1;
+  const pot = BUY_IN * numPlayers;
   const payouts=[Math.round(pot*0.6),Math.round(pot*0.3),Math.round(pot*0.1)];
   return (
     <div style={S.sec}>
@@ -1012,7 +1012,7 @@ function Leaderboard({ranked,scores,player,data}) {
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {ranked.map(([name,s],i)=>{
           const isMe=name===player;
-          const payout=i<3?`💰 $${payouts[i]}`:"";
+          const payout=i<3?`💰 ₹${payouts[i].toLocaleString("en-IN")}`:"";
           return (
             <div key={name} style={{background:i===0?"linear-gradient(135deg,rgba(240,192,64,0.15),rgba(249,168,37,0.08))":T.bgCard,borderRadius:14,padding:"14px 16px",border:`1px solid ${isMe?"#22c55e":i===0?"rgba(240,192,64,0.4)":T.border}`,boxShadow:i===0?"0 4px 20px rgba(240,192,64,0.15)":"0 2px 8px rgba(0,0,0,.2)"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1033,14 +1033,14 @@ function Leaderboard({ranked,scores,player,data}) {
                 <div style={{fontWeight:900,fontSize:24,background:"linear-gradient(90deg,#f0c040,#f9a825)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",minWidth:44,textAlign:"right"}}>{s.total}</div>
               </div>
               {/* progress bar */}
-              <div style={{marginTop:8,background:"#f0f0f0",borderRadius:999,height:5,overflow:"hidden"}}>
+              <div style={{marginTop:8,background:"rgba(255,255,255,0.08)",borderRadius:999,height:5,overflow:"hidden"}}>
                 <div style={{width:`${ranked.length>0?Math.max(4,Math.round((s.total/Math.max(ranked[0][1].total,1))*100)):0}%`,height:"100%",background:i===0?"#FFD700":playerColor(name),borderRadius:999}}/>
               </div>
             </div>
           );
         })}
       </div>
-      <p style={{color:"#475569",fontSize:12,marginTop:12,textAlign:"center"}}>Prize pool: ${pot} · 60/30/10% split · Auto-updated live</p>
+      <p style={{color:T.textDim,fontSize:12,marginTop:12,textAlign:"center"}}>₹{BUY_IN.toLocaleString("en-IN")}/person · {numPlayers} player{numPlayers!==1?"s":""} · Total pot: <strong style={{color:T.gold}}>₹{pot.toLocaleString("en-IN")}</strong> · 60/30/10% split</p>
     </div>
   );
 }
@@ -1323,6 +1323,27 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
   const locked=new Date()>=new Date("2026-06-11T15:00:00");
   const [form,setForm]=useState({winner:pred.winner||"",runnerUp:pred.runnerUp||"",thirdPlace:pred.thirdPlace||"",goldenBoot:pred.goldenBoot||"",goldenBall:pred.goldenBall||"",goldenGlove:pred.goldenGlove||""});
   const [changed,setChanged]=useState(false);
+
+  // Countdown to tournament start
+  const TournamentCountdown = () => {
+    const secs = useCountdown("2026-06-11","15:00");
+    if(secs<=0) return null;
+    const d=Math.floor(secs/86400),h=Math.floor((secs%86400)/3600),m=Math.floor((secs%3600)/60),s=secs%60;
+    const urgent=secs<86400, warning=secs<7*86400;
+    const col=urgent?"#ef4444":warning?"#f97316":T.gold;
+    const bg=urgent?"rgba(239,68,68,0.1)":warning?"rgba(249,115,22,0.1)":"rgba(240,192,64,0.1)";
+    const parts=d>0?`${d}d ${h}h ${String(m).padStart(2,"0")}m`:`${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+    return (
+      <div style={{display:"flex",alignItems:"center",gap:8,background:bg,border:`1px solid ${col}40`,borderRadius:10,padding:"10px 14px",marginBottom:12}}>
+        <span style={{fontSize:18}}>⏰</span>
+        <div>
+          <div style={{fontSize:12,color:col,fontWeight:700}}>Predictions lock at tournament kickoff</div>
+          <div style={{fontSize:18,fontWeight:900,fontFamily:"monospace",color:col}}>{parts}</div>
+        </div>
+        <div style={{marginLeft:"auto",fontSize:11,color:T.textDim}}>Jun 11 · 3PM ET</div>
+      </div>
+    );
+  };
 
   const fields=[
     {key:"winner",label:"🏆 Tournament Winner",pts:20,color:"#FFD700"},
@@ -1637,10 +1658,18 @@ function RulesTab() {
       {DEDUCTIONS.map(d=>(
         <div key={d.stage} style={{display:"flex",justifyContent:"space-between",padding:"7px 10px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:4,fontSize:13,color:"#cbd5e1"}}>
           <span style={{fontWeight:600,color:"#e2e8f0"}}>{d.stage}</span>
-          <span style={{color:d.pts===0?"#1B5E20":"#C62828",fontWeight:800}}>{d.label}</span>
+          <span style={{color:d.pts===0?"#22c55e":"#ef4444",fontWeight:800}}>{d.label}</span>
         </div>
       ))}
-      <div style={{background:"#FFF3E0",borderRadius:8,padding:"8px 12px",fontSize:12,marginTop:6}}>⚠️ Deduction applied per change event, logged by admin. Change freely before tournament starts.</div>
+      <div style={{background:"rgba(249,115,22,0.08)",border:"1px solid rgba(249,115,22,0.2)",borderRadius:8,padding:"8px 12px",fontSize:12,marginTop:8,color:"#fdba74",marginBottom:6}}>
+        ⚠️ <strong>Group Qualifier Penalties</strong> — changing qualifier picks after a group's matches start also costs points. Groups lock individually as their matchday begins.
+      </div>
+      {QUAL_PENALTY_TIERS.map((t,i)=>(
+        <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",background:"rgba(255,255,255,0.02)",borderRadius:8,marginBottom:3,fontSize:12,color:T.textDim}}>
+          <span>{t.label}</span>
+          <span style={{color:t.pts===0?"#22c55e":"#f97316",fontWeight:700}}>{t.pts===0?"Free":"−"+t.pts+" pts"}</span>
+        </div>
+      ))}
     </>},
     {icon:"⚡",title:"Upset Bonus Points",color:"#ef4444",body:<>
       <p style={S.rp}>When a <strong style={{color:T.text}}>lower-ranked team wins</strong>, players who correctly predicted that upset earn bonus points on top of the normal match points. Applies to match predictions only — not tournament prizes.</p>
@@ -1967,20 +1996,77 @@ function PlayerProfile({player,data,update,toast_}) {
 }
 
 // ─── PLAYER: QUALIFIERS ───────────────────────────────────────────────────────
+// Group last match dates — after this the group locks for qualifier changes
+const GROUP_LAST_MATCH = {
+  A:"2026-06-24",B:"2026-06-24",C:"2026-06-24",
+  D:"2026-06-25",E:"2026-06-25",F:"2026-06-25",
+  G:"2026-06-26",H:"2026-06-26",I:"2026-06-26",
+  J:"2026-06-27",K:"2026-06-27",L:"2026-06-27",
+};
+// Penalty for changing a qualifier pick after group stage starts
+const QUAL_PENALTY_TIERS = [
+  {before:"2026-06-11",pts:0, label:"Free — before tournament"},
+  {before:"2026-06-24",pts:3, label:"−3 pts — group stage started"},
+  {before:"2026-06-27",pts:6, label:"−6 pts — most groups played"},
+  {before:"2099-01-01",pts:10,label:"−10 pts — group stage ending"},
+];
+function getQualPenalty() {
+  const now=new Date();
+  for(const t of QUAL_PENALTY_TIERS){ if(now<new Date(t.before)) return t; }
+  return QUAL_PENALTY_TIERS[QUAL_PENALTY_TIERS.length-1];
+}
+function isGroupLocked(grp) {
+  // A group locks for qualifier changes once its last match has kicked off
+  const lastDate = GROUP_LAST_MATCH[grp];
+  if(!lastDate) return false;
+  return new Date() >= new Date(lastDate+"T00:00:00");
+}
+
 function PlayerQualifiers({player,data,update,toast_}) {
-  const locked = new Date() >= new Date("2026-06-11T15:00:00");
+  const tournamentStarted = new Date() >= new Date("2026-06-11T15:00:00");
   const GC={A:"#B71C1C",B:"#1A237E",C:"#1B5E20",D:"#E65100",E:"#4A148C",F:"#006064",G:"#880E4F",H:"#F57F17",I:"#01579B",J:"#33691E",K:"#37474F",L:"#6A1B9A"};
 
   const getT=(grp,slot)=>data.groupQualifiers[`${player}_${grp}_${slot}`]?.team||"";
   const getQ=(grp,slot)=>data.groupQualifiers[`${player}_${grp}_${slot}`]?.qualified??null;
+  const qualPenalty = getQualPenalty();
 
   function setTeam(grp,slot,team){
+    const grpLocked = isGroupLocked(grp);
+    const penalty = grpLocked ? qualPenalty.pts : 0;
+    if(grpLocked && penalty>0){
+      if(!window.confirm(`Changing Group ${grp} pick after matches started costs ${penalty} pts. Continue?`)) return;
+    }
     update(d=>{
       const key=`${player}_${grp}_${slot}`;
+      const prev = d.groupQualifiers[key]?.team;
       d.groupQualifiers[key]={...d.groupQualifiers[key],team};
+      // Apply deduction if changing after group started
+      if(grpLocked && penalty>0 && prev && prev!==team){
+        d.deductions[player]=(d.deductions[player]||0)+penalty;
+        d.changeLog.push({date:new Date().toISOString().slice(0,10),player,what:`Group ${grp} qualifier changed`,stage:qualPenalty.label,deduction:penalty});
+      }
       return d;
     });
   }
+
+  // Countdown to tournament start (for qualifier lock)
+  const QualCountdown = () => {
+    const secs = useCountdown("2026-06-11","15:00");
+    if(secs<=0) return null;
+    const d=Math.floor(secs/86400),h=Math.floor((secs%86400)/3600),m=Math.floor((secs%3600)/60),s2=secs%60;
+    const parts=d>0?`${d}d ${h}h ${String(m).padStart(2,"0")}m`:`${h}h ${String(m).padStart(2,"0")}m ${String(s2).padStart(2,"0")}s`;
+    const col=secs<86400?"#ef4444":secs<7*86400?"#f97316":T.gold;
+    return (
+      <div style={{display:"flex",alignItems:"center",gap:8,background:`rgba(240,192,64,0.08)`,border:`1px solid rgba(240,192,64,0.2)`,borderRadius:10,padding:"10px 14px",marginBottom:12}}>
+        <span style={{fontSize:18}}>⏰</span>
+        <div>
+          <div style={{fontSize:12,color:col,fontWeight:700}}>Qualifier picks lock at tournament kickoff</div>
+          <div style={{fontSize:18,fontWeight:900,fontFamily:"monospace",color:col}}>{parts}</div>
+        </div>
+        <div style={{marginLeft:"auto",fontSize:11,color:T.textDim}}>Jun 11 · 3PM ET</div>
+      </div>
+    );
+  };
 
   // Count how many picks made and points earned so far
   const totalPicks = Object.keys(GROUPS).reduce((sum,grp)=>{
@@ -2004,14 +2090,16 @@ function PlayerQualifiers({player,data,update,toast_}) {
         ))}
       </div>
 
-      {locked && (
-        <div style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#fca5a5"}}>
-          🔒 Group stage has started — predictions are locked. Results auto-update when admin syncs scores.
+      {!tournamentStarted && <QualCountdown/>}
+      {tournamentStarted && qualPenalty.pts>0 && (
+        <div style={{background:"rgba(249,115,22,0.1)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#fdba74"}}>
+          ⚠️ Tournament started — qualifier changes now cost <strong>{qualPenalty.pts} pts</strong> ({qualPenalty.label}).
+          Groups with ongoing/completed matches are locked individually.
         </div>
       )}
-      {!locked && (
+      {!tournamentStarted && (
         <div style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.25)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.green}}>
-          ⏰ Pick <strong>2 teams per group</strong> that you think will advance. Locks at tournament start (Jun 11). Worth <strong>2 pts each</strong>, max 48 pts.
+          ⏰ Pick <strong>2 teams per group</strong> that you think will advance. Locks per-group as matches kick off. Worth <strong>2 pts each</strong>, max 48 pts.
         </div>
       )}
 
@@ -2023,11 +2111,10 @@ function PlayerQualifiers({player,data,update,toast_}) {
             <div key={grp} style={{background:T.bgCard,borderRadius:12,overflow:"hidden",boxShadow:"0 4px 16px rgba(0,0,0,.3)",border:"1px solid rgba(255,255,255,0.07)"}}>
               <div style={{background:GC[grp],color:"#fff",fontWeight:900,fontSize:13,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <span>GROUP {grp}</span>
-                {(pick0||pick1) && (
-                  <span style={{fontSize:11,opacity:.8}}>
-                    {[q0,q1].filter(q=>q===true).length * 2} pts
-                  </span>
-                )}
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  {isGroupLocked(grp)&&<span style={{fontSize:10,background:"rgba(0,0,0,0.3)",borderRadius:4,padding:"1px 5px"}}>🔒 Locked</span>}
+                  {(pick0||pick1) && <span style={{fontSize:11,opacity:.8}}>{[q0,q1].filter(q=>q===true).length * 2} pts</span>}
+                </div>
               </div>
               <div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
                 {[0,1].map(slot=>{
