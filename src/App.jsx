@@ -76,6 +76,32 @@ const DEDUCTIONS = [
   {stage:"Semifinal",before:"2026-07-19",pts:25,label:"−25 pts"},
   {stage:"Post-Semis",before:"2099-01-01",pts:30,label:"−30 pts"},
 ];
+
+// Group last match dates — groups lock for qualifier changes once their last match kicks off
+const GROUP_LAST_MATCH = {
+  A:"2026-06-24",B:"2026-06-24",C:"2026-06-24",
+  D:"2026-06-25",E:"2026-06-25",F:"2026-06-25",
+  G:"2026-06-26",H:"2026-06-26",I:"2026-06-26",
+  J:"2026-06-27",K:"2026-06-27",L:"2026-06-27",
+};
+
+// Penalty for changing a qualifier pick after the group stage has started
+const QUAL_PENALTY_TIERS = [
+  {before:"2026-06-11",pts:0, label:"Free — before tournament"},
+  {before:"2026-06-24",pts:3, label:"−3 pts — group stage started"},
+  {before:"2026-06-27",pts:6, label:"−6 pts — most groups played"},
+  {before:"2099-01-01",pts:10,label:"−10 pts — group stage ending"},
+];
+function getQualPenalty() {
+  const now=new Date();
+  for(const t of QUAL_PENALTY_TIERS){ if(now<new Date(t.before)) return t; }
+  return QUAL_PENALTY_TIERS[QUAL_PENALTY_TIERS.length-1];
+}
+function isGroupLocked(grp) {
+  const lastDate = GROUP_LAST_MATCH[grp];
+  if(!lastDate) return false;
+  return new Date() >= new Date(lastDate+"T00:00:00");
+}
 const MATCHES = [
   {id:1,stage:"Group Stage",grp:"A",date:"2026-06-11",time:"15:00",home:"Mexico",away:"South Africa",venue:"Estadio Azteca",city:"Mexico City"},
   {id:2,stage:"Group Stage",grp:"A",date:"2026-06-11",time:"22:00",home:"South Korea",away:"Czechia",venue:"Estadio Akron",city:"Zapopan"},
@@ -1996,32 +2022,6 @@ function PlayerProfile({player,data,update,toast_}) {
 }
 
 // ─── PLAYER: QUALIFIERS ───────────────────────────────────────────────────────
-// Group last match dates — after this the group locks for qualifier changes
-const GROUP_LAST_MATCH = {
-  A:"2026-06-24",B:"2026-06-24",C:"2026-06-24",
-  D:"2026-06-25",E:"2026-06-25",F:"2026-06-25",
-  G:"2026-06-26",H:"2026-06-26",I:"2026-06-26",
-  J:"2026-06-27",K:"2026-06-27",L:"2026-06-27",
-};
-// Penalty for changing a qualifier pick after group stage starts
-const QUAL_PENALTY_TIERS = [
-  {before:"2026-06-11",pts:0, label:"Free — before tournament"},
-  {before:"2026-06-24",pts:3, label:"−3 pts — group stage started"},
-  {before:"2026-06-27",pts:6, label:"−6 pts — most groups played"},
-  {before:"2099-01-01",pts:10,label:"−10 pts — group stage ending"},
-];
-function getQualPenalty() {
-  const now=new Date();
-  for(const t of QUAL_PENALTY_TIERS){ if(now<new Date(t.before)) return t; }
-  return QUAL_PENALTY_TIERS[QUAL_PENALTY_TIERS.length-1];
-}
-function isGroupLocked(grp) {
-  // A group locks for qualifier changes once its last match has kicked off
-  const lastDate = GROUP_LAST_MATCH[grp];
-  if(!lastDate) return false;
-  return new Date() >= new Date(lastDate+"T00:00:00");
-}
-
 function PlayerQualifiers({player,data,update,toast_}) {
   const tournamentStarted = new Date() >= new Date("2026-06-11T15:00:00");
   const GC={A:"#B71C1C",B:"#1A237E",C:"#1B5E20",D:"#E65100",E:"#4A148C",F:"#006064",G:"#880E4F",H:"#F57F17",I:"#01579B",J:"#33691E",K:"#37474F",L:"#6A1B9A"};
