@@ -131,14 +131,15 @@ const QUAL_PENALTY_TIERS = [
   {before:"2099-01-01",pts:10,label:"−10 pts — group stage ending"},
 ];
 function getQualPenalty() {
-  const now=new Date();
-  for(const t of QUAL_PENALTY_TIERS){ if(now<new Date(t.before)) return t; }
+  const now=Date.now();
+  for(const t of QUAL_PENALTY_TIERS){ if(now<new Date(t.before+"T12:00:00Z").getTime()) return t; }
   return QUAL_PENALTY_TIERS[QUAL_PENALTY_TIERS.length-1];
 }
 function isGroupLocked(grp) {
   const lastDate = GROUP_LAST_MATCH[grp];
   if(!lastDate) return false;
-  return new Date() >= new Date(lastDate+"T00:00:00");
+  // Group locks at midnight ET (04:00 UTC) on the day of last matches
+  return Date.now() >= new Date(lastDate+"T04:00:00Z").getTime();
 }
 const MATCHES = [
   {id:1,stage:"Group Stage",grp:"A",date:"2026-06-11",time:"15:00",home:"Mexico",away:"South Africa",venue:"Estadio Azteca",city:"Mexico City"},
@@ -258,8 +259,8 @@ const calcMatchPts = (actual, pred, rankHome, rankAway) => {
   const upsetBonus = getUpsetBonus(rankHome, rankAway, actual);
   return basePts + upsetBonus;
 };
-const isLocked = m => { const[h,mn]=m.time.split(":").map(Number); return new Date()>=new Date(`${m.date}T${String(h).padStart(2,"0")}:${String(mn).padStart(2,"0")}:00`); };
-const getCurrentStage = () => { const now=new Date(); for(const d of DEDUCTIONS){if(now<new Date(d.before))return d;} return DEDUCTIONS[DEDUCTIONS.length-1]; };
+const isLocked = m => Date.now() >= etToUtcMs(m.date, m.time);
+const getCurrentStage = () => { const now=Date.now(); for(const d of DEDUCTIONS){if(now<new Date(d.before+"T12:00:00Z").getTime())return d;} return DEDUCTIONS[DEDUCTIONS.length-1]; };
 const fmt12 = t => { const[h,m]=t.split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")}${h>=12?"PM":"AM"} ET`; };
 const fmtTZ = (t, offsetHrs) => {
   const[h,m]=t.split(":").map(Number);
@@ -333,12 +334,19 @@ const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.le
 const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:2000, playerPasswords:{}, playerTimezones:{}, knockoutTeams:{}, teamRankings:{} });
 
 // ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────────
+// All match times are stored in ET (Eastern Daylight Time = UTC-4 during summer).
+// We must parse them as UTC-4, NOT as local time, to get correct countdowns
+// regardless of what timezone the user's browser is in.
+function etToUtcMs(etDate, etTime) {
+  const [h,m] = etTime.split(":").map(Number);
+  // ET during summer = UTC-4, so add 4 hours to get UTC
+  const utcH = h + 4;
+  const dateStr = `${etDate}T${String(utcH).padStart(2,"0")}:${String(m).padStart(2,"0")}:00Z`;
+  return new Date(dateStr).getTime();
+}
+
 function useCountdown(etDate, etTime) {
-  const getSecsLeft = () => {
-    const [h,m] = etTime.split(":").map(Number);
-    const kickoff = new Date(`${etDate}T${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:00`);
-    return Math.max(0, Math.floor((kickoff - new Date()) / 1000));
-  };
+  const getSecsLeft = () => Math.max(0, Math.floor((etToUtcMs(etDate,etTime) - Date.now()) / 1000));
   const [secs, setSecs] = useState(getSecsLeft);
   useEffect(() => {
     if (secs <= 0) return;
@@ -585,7 +593,7 @@ export default function App() {
           player={player}
           onClose={()=>setShowOnboarding(false)}
           onGoTo={(t)=>{ setShowOnboarding(false); setTab(t); }}
-          tournamentStarted={new Date()>=new Date("2026-06-11T15:00:00")}
+          tournamentStarted={new Date()>=new Date("2026-06-11T19:00:00Z")}
         />
       )}
     </div>
@@ -1384,7 +1392,7 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
 // ─── PREDICTIONS TAB ──────────────────────────────────────────────────────────
 function PredictionsTab({player,data,update,toast_,stageInfo}) {
   const pred=data.predictions[player]||{};
-  const locked=new Date()>=new Date("2026-06-11T15:00:00");
+  const locked=new Date()>=new Date("2026-06-11T19:00:00Z");
   const [form,setForm]=useState({winner:pred.winner||"",runnerUp:pred.runnerUp||"",thirdPlace:pred.thirdPlace||"",goldenBoot:pred.goldenBoot||"",goldenBall:pred.goldenBall||"",goldenGlove:pred.goldenGlove||""});
   const [changed,setChanged]=useState(false);
 
@@ -2061,7 +2069,7 @@ function PlayerProfile({player,data,update,toast_}) {
 
 // ─── PLAYER: QUALIFIERS ───────────────────────────────────────────────────────
 function PlayerQualifiers({player,data,update,toast_}) {
-  const tournamentStarted = new Date() >= new Date("2026-06-11T15:00:00");
+  const tournamentStarted = new Date() >= new Date("2026-06-11T19:00:00Z");
   const GC={A:"#B71C1C",B:"#1A237E",C:"#1B5E20",D:"#E65100",E:"#4A148C",F:"#006064",G:"#880E4F",H:"#F57F17",I:"#01579B",J:"#33691E",K:"#37474F",L:"#6A1B9A"};
 
   const getT=(grp,slot)=>data.groupQualifiers[`${player}_${grp}_${slot}`]?.team||"";
