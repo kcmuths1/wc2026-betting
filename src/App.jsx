@@ -1265,14 +1265,15 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
   const sA=scores[h2hA], sB=scores[h2hB];
   const predA=data.predictions[h2hA]||{}, predB=data.predictions[h2hB]||{};
   const playedMatches=MATCHES.filter(m=>data.matchActuals[m.id]?.score);
+  const rankings=data.teamRankings||{};
 
-  // Per-match comparison
   const matchComparison=playedMatches.map(m=>{
     const actual=data.matchActuals[m.id]?.score;
     const predAScore=data.matchPredictions[`${h2hA}_${m.id}`];
     const predBScore=data.matchPredictions[`${h2hB}_${m.id}`];
-    const ptsA=actual&&predAScore?calcMatchPts(actual,predAScore):0;
-    const ptsB=actual&&predBScore?calcMatchPts(actual,predBScore):0;
+    const {home,away}=getMatchTeams(m,data);
+    const ptsA=actual&&predAScore?calcMatchPts(actual,predAScore,rankings[home],rankings[away]):0;
+    const ptsB=actual&&predBScore?calcMatchPts(actual,predBScore,rankings[home],rankings[away]):0;
     return {m,actual,predAScore,predBScore,ptsA,ptsB};
   });
   const matchWinsA=matchComparison.filter(r=>r.ptsA>r.ptsB).length;
@@ -1284,6 +1285,122 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
     {key:"thirdPlace",label:"🥉 3rd Place",pts:8},{key:"goldenBoot",label:"⚽ Golden Boot",pts:15},
     {key:"goldenBall",label:"🎖 Golden Ball",pts:15},{key:"goldenGlove",label:"🧤 Golden Glove",pts:12},
   ];
+
+  return (
+    <div style={S.sec}>
+      <h2 style={S.h2}>⚔️ Head-to-Head</h2>
+      <div style={{display:"flex",gap:10,marginBottom:16}}>
+        <div style={{flex:1}}>
+          <label style={S.lbl}>Player A</label>
+          <select style={S.sel} value={h2hA} onChange={e=>setH2hA(e.target.value)}>
+            <option value="">— Select —</option>
+            {allPlayers.filter(p=>p!==h2hB).map(p=><option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div style={{display:"flex",alignItems:"flex-end",padding:"0 4px 8px",fontWeight:900,color:T.textMute}}>VS</div>
+        <div style={{flex:1}}>
+          <label style={S.lbl}>Player B</label>
+          <select style={S.sel} value={h2hB} onChange={e=>setH2hB(e.target.value)}>
+            <option value="">— Select —</option>
+            {allPlayers.filter(p=>p!==h2hA).map(p=><option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {h2hA&&h2hB&&sA&&sB&&(
+        <>
+          {/* Score banner */}
+          <div style={{background:"linear-gradient(135deg,#1a2535,#0d1520)",border:"1px solid rgba(240,192,64,0.15)",borderRadius:14,padding:20,marginBottom:14,color:"#fff",textAlign:"center"}}>
+            <div style={{display:"flex",justifyContent:"space-around",alignItems:"center"}}>
+              <div>
+                <div style={{width:12,height:12,borderRadius:"50%",background:playerColor(h2hA),margin:"0 auto 6px"}}/>
+                <div style={{fontWeight:900,fontSize:18,color:T.text}}>{h2hA}</div>
+                <div style={{fontSize:36,fontWeight:900,color:T.gold,margin:"4px 0"}}>{sA.total}</div>
+                <div style={{fontSize:11,color:T.textDim}}>pts</div>
+              </div>
+              <div style={{fontSize:22,color:T.textMute}}>⚔️</div>
+              <div>
+                <div style={{width:12,height:12,borderRadius:"50%",background:playerColor(h2hB),margin:"0 auto 6px"}}/>
+                <div style={{fontWeight:900,fontSize:18,color:T.text}}>{h2hB}</div>
+                <div style={{fontSize:36,fontWeight:900,color:T.gold,margin:"4px 0"}}>{sB.total}</div>
+                <div style={{fontSize:11,color:T.textDim}}>pts</div>
+              </div>
+            </div>
+            <div style={{marginTop:12,fontSize:13,color:T.textDim}}>
+              {sA.total>sB.total?`${h2hA} leads by ${sA.total-sB.total} pts`:sB.total>sA.total?`${h2hB} leads by ${sB.total-sA.total} pts`:"Tied!"}
+            </div>
+          </div>
+
+          {/* Category comparison */}
+          <div style={S.card}>
+            <div style={S.blockTitle}>📊 Category Comparison</div>
+            {[["🔮 Predictions",sA.predPts,sB.predPts],["⚽ Matches",sA.matchPts,sB.matchPts],["👥 Qualifiers",sA.qualPts,sB.qualPts],["📉 Deductions",-sA.ded,-sB.ded],["🎯 Exact Scores",sA.exactCount,sB.exactCount,"×"],["✅ Correct Results",sA.resultCount,sB.resultCount,"×"]].map(([l,a,b,unit="pts"])=>{
+              const max=Math.max(Math.abs(a),Math.abs(b),1);
+              return (
+                <div key={l} style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:600,marginBottom:3}}>
+                    <span style={{color:a>=b?playerColor(h2hA):T.textMute,fontWeight:a>=b?800:400}}>{a}{unit}</span>
+                    <span style={{color:T.textDim}}>{l}</span>
+                    <span style={{color:b>=a?playerColor(h2hB):T.textMute,fontWeight:b>=a?800:400}}>{b}{unit}</span>
+                  </div>
+                  <div style={{display:"flex",gap:2,height:8}}>
+                    <div style={{flex:1,display:"flex",justifyContent:"flex-end"}}>
+                      <div style={{width:`${Math.abs(a)/max*100}%`,height:"100%",background:playerColor(h2hA),borderRadius:"4px 0 0 4px"}}/>
+                    </div>
+                    <div style={{width:2,background:T.border}}/>
+                    <div style={{flex:1}}>
+                      <div style={{width:`${Math.abs(b)/max*100}%`,height:"100%",background:playerColor(h2hB),borderRadius:"0 4px 4px 0"}}/>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Tournament predictions comparison */}
+          <div style={S.card}>
+            <div style={S.blockTitle}>🔮 Tournament Predictions</div>
+            {predFields.map(f=>{
+              const va=predA[f.key]||"—", vb=predB[f.key]||"—";
+              const match=va!=="—"&&vb!=="—"&&va===vb;
+              return (
+                <div key={f.key} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:`1px solid ${T.border}`,fontSize:13}}>
+                  <span style={{minWidth:20}}>{f.label.split(" ")[0]}</span>
+                  <span style={{flex:1,fontWeight:700,color:playerColor(h2hA),textAlign:"right"}}>{va}</span>
+                  <span style={{background:match?"rgba(34,197,94,0.15)":T.bgCard2,borderRadius:6,padding:"2px 8px",fontSize:11,color:match?T.green:T.textMute,fontWeight:600}}>{match?"🤝 Same":"vs"}</span>
+                  <span style={{flex:1,fontWeight:700,color:playerColor(h2hB)}}>{vb}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Match wins */}
+          {playedMatches.length>0&&(
+            <div style={S.card}>
+              <div style={S.blockTitle}>⚽ Match-by-Match Record</div>
+              <div style={{display:"flex",justifyContent:"space-around",textAlign:"center",marginBottom:12}}>
+                {[[h2hA,matchWinsA,playerColor(h2hA)],["Draws",matchDraws,T.textMute],[h2hB,matchWinsB,playerColor(h2hB)]].map(([l,v,c])=>(
+                  <div key={l}><div style={{fontSize:28,fontWeight:900,color:c}}>{v}</div><div style={{fontSize:11,color:T.textDim}}>{l}</div></div>
+                ))}
+              </div>
+              <div style={{maxHeight:200,overflowY:"auto"}}>
+                {matchComparison.slice(0,20).map(({m,actual,predAScore,predBScore,ptsA,ptsB})=>(
+                  <div key={m.id} style={{display:"flex",gap:6,padding:"5px 0",borderBottom:`1px solid ${T.border}`,fontSize:11,alignItems:"center"}}>
+                    <span style={{color:T.textMute,minWidth:28}}>#{m.id}</span>
+                    <span style={{flex:1,color:ptsA>ptsB?playerColor(h2hA):T.textMute,fontWeight:ptsA>ptsB?700:400}}>{predAScore||"—"} ({ptsA}pt)</span>
+                    <span style={{color:T.green,fontWeight:700,background:"rgba(34,197,94,0.12)",padding:"1px 5px",borderRadius:4}}>{actual}</span>
+                    <span style={{flex:1,textAlign:"right",color:ptsB>ptsA?playerColor(h2hB):T.textMute,fontWeight:ptsB>ptsA?700:400}}>{predBScore||"—"} ({ptsB}pt)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      {(!h2hA||!h2hB)&&<div style={S.empty}>Select two players above to compare</div>}
+    </div>
+  );
+}
 
   return (
     <div style={S.sec}>
