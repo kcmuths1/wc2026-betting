@@ -338,11 +338,18 @@ const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, 
 // We must parse them as UTC-4, NOT as local time, to get correct countdowns
 // regardless of what timezone the user's browser is in.
 function etToUtcMs(etDate, etTime) {
-  const [h,m] = etTime.split(":").map(Number);
-  // ET during summer = UTC-4, so add 4 hours to get UTC
-  const utcH = h + 4;
-  const dateStr = `${etDate}T${String(utcH).padStart(2,"0")}:${String(m).padStart(2,"0")}:00Z`;
-  return new Date(dateStr).getTime();
+  // ET during summer = EDT = UTC-4
+  // Parse the ET date+time, then add 4h to convert to UTC
+  const [h, m] = etTime.split(":").map(Number);
+  const totalMins = h * 60 + m + 4 * 60; // add 4h in minutes
+  const extraDays = Math.floor(totalMins / (24 * 60));
+  const utcH = Math.floor((totalMins % (24 * 60)) / 60);
+  const utcM = totalMins % 60;
+  // Apply any day overflow to the date
+  const base = new Date(etDate + "T00:00:00Z");
+  base.setUTCDate(base.getUTCDate() + extraDays);
+  base.setUTCHours(utcH, utcM, 0, 0);
+  return base.getTime();
 }
 
 function useCountdown(etDate, etTime) {
@@ -507,11 +514,15 @@ export default function App() {
 
   if(!player&&!isAdmin) return <Login playerInput={playerInput} setPlayerInput={setPlayerInput} adminInput={adminInput} setAdminInput={setAdminInput} setPlayer={setPlayer} setIsAdmin={setIsAdmin} toast_={toast_} toast={toast} data={data} update={update}/>;
 
+  const tournamentStarted = Date.now() >= new Date("2026-06-11T19:00:00Z").getTime();
+  const groupStageOver   = Date.now() >= new Date("2026-06-28T04:00:00Z").getTime(); // after last group matches
+
   const playerTabs=[
     {id:"home",label:"🏠",tip:"Home"},
     {id:"rules",label:"📖",tip:"Rules"},
     {id:"leaderboard",label:"🏆",tip:"Leaderboard"},
     {id:"dashboard",label:"📊",tip:"Dashboard"},
+    ...(tournamentStarted?[{id:"picks",label:"👁",tip:"All Picks"}]:[]),
     {id:"predictions",label:"🔮",tip:"Predictions"},
     {id:"matches",label:"⚽",tip:"Matches"},
     {id:"qualifiers",label:"👥",tip:"Qualifiers"},
@@ -525,6 +536,7 @@ export default function App() {
     {id:"rules",label:"📖",tip:"Rules"},
     {id:"leaderboard",label:"🏆",tip:"Leaderboard"},
     {id:"dashboard",label:"📊",tip:"Dashboard"},
+    ...(tournamentStarted?[{id:"picks",label:"👁",tip:"All Picks"}]:[]),
     {id:"admin_results",label:"⚙️",tip:"Results"},
     {id:"admin_qualifiers",label:"✅",tip:"Qualifiers"},
     {id:"admin_deductions",label:"📉",tip:"Deductions"},
@@ -576,7 +588,7 @@ export default function App() {
             {tab==="matches"       && !isAdmin && <MatchesTab player={player} data={data} update={update} toast_={toast_} matchFilter={matchFilter} setMatchFilter={setMatchFilter} playerTZ={playerTZ}/>}
             {tab==="qualifiers"    && !isAdmin && <PlayerQualifiers player={player} data={data} update={update} toast_={toast_}/>}
             {tab==="profile"       && !isAdmin && <PlayerProfile player={player} data={data} update={update} toast_={toast_}/>}
-            {tab==="h2h"           && <H2HTab ranked={ranked} scores={scores} data={data} h2hA={h2hA} setH2hA={setH2hA} h2hB={h2hB} setH2hB={setH2hB}/>}
+            {tab==="picks"          && <AllPicksTab ranked={ranked} data={data} player={player} groupStageOver={groupStageOver}/>}
             {tab==="groups"        && <GroupsTab/>}
             {tab==="schedule"      && <ScheduleTab data={data} playerTZ={playerTZ}/>}
             {tab==="rules"         && <RulesTab/>}
@@ -2775,6 +2787,254 @@ function OnboardingModal({player,onClose,onGoTo,tournamentStarted}) {
     </div>
   );
 }
+
+// ─── ALL PICKS TAB ────────────────────────────────────────────────────────────
+function AllPicksTab({ranked, data, player, groupStageOver}) {
+  const players = ranked.map(([n]) => n);
+  const actuals = data.matchActuals || {};
+  const medals = ["🥇","🥈","🥉"];
+
+  const PRED_FIELDS = [
+    { key:"winner",     label:"🏆 Winner",      pts:20, actualKey:"_winner"     },
+    { key:"runnerUp",   label:"🥈 Runner-Up",    pts:12, actualKey:"_runnerUp"   },
+    { key:"thirdPlace", label:"🥉 3rd Place",    pts:8,  actualKey:"_thirdPlace" },
+    { key:"goldenBoot", label:"⚽ Golden Boot",  pts:15, actualKey:"_goldenBoot" },
+    { key:"goldenBall", label:"🎖 Golden Ball",  pts:15, actualKey:"_goldenBall" },
+    { key:"goldenGlove",label:"🧤 Golden Glove", pts:12, actualKey:"_goldenGlove"},
+  ];
+
+  if (players.length === 0) {
+    return (
+      <div style={S.sec}>
+        <h2 style={S.h2}>👁 All Picks</h2>
+        <div style={{...S.card, textAlign:"center", color:T.textMute, padding:32}}>
+          No players have entered predictions yet.
+        </div>
+      </div>
+    );
+  }
+
+  // ── Qualifier picks section ─────────────────────────────────────────────────
+  const QualifierPicks = () => {
+    const GC={A:"#B71C1C",B:"#1A237E",C:"#1B5E20",D:"#E65100",E:"#4A148C",F:"#006064",G:"#880E4F",H:"#F57F17",I:"#01579B",J:"#33691E",K:"#37474F",L:"#6A1B9A"};
+    return (
+      <div style={{...S.card, marginTop:16}}>
+        <div style={S.blockTitle}>👥 Group Qualifier Picks (all players)</div>
+        <p style={{fontSize:12,color:T.textDim,marginBottom:14}}>
+          Each player's 2 picks per group. 🟢 = qualified · 🔴 = eliminated · ⬜ = result pending
+        </p>
+        {Object.entries(GROUPS).map(([grp, teams])=>{
+          // Check if any results are known for this group
+          const anyResult = players.some(p=>{
+            const q0 = data.groupQualifiers[`${p}_${grp}_0`]?.qualified;
+            const q1 = data.groupQualifiers[`${p}_${grp}_1`]?.qualified;
+            return q0!==null&&q0!==undefined || q1!==null&&q1!==undefined;
+          });
+
+          return (
+            <div key={grp} style={{marginBottom:10,borderRadius:10,overflow:"hidden",border:"1px solid rgba(255,255,255,0.06)"}}>
+              {/* Group header */}
+              <div style={{background:GC[grp],padding:"6px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <span style={{color:"#fff",fontWeight:800,fontSize:12,letterSpacing:1}}>GROUP {grp}</span>
+                <span style={{color:"rgba(255,255,255,0.7)",fontSize:11}}>{teams.join(" · ")}</span>
+              </div>
+              {/* Players grid */}
+              <div style={{display:"grid",gridTemplateColumns:`120px repeat(${players.length},1fr)`,background:T.bgCard2}}>
+                {/* Column headers */}
+                <div style={{padding:"6px 10px",fontSize:10,color:T.textMute,fontWeight:700,borderBottom:"1px solid rgba(255,255,255,0.06)"}}>Pick</div>
+                {players.map((p,i)=>(
+                  <div key={p} style={{padding:"6px 6px",fontSize:10,fontWeight:800,color:p===player?T.gold:T.textDim,textAlign:"center",borderBottom:"1px solid rgba(255,255,255,0.06)",borderLeft:"1px solid rgba(255,255,255,0.04)"}}>
+                    {medals[i]||`#${i+1}`} {p}
+                  </div>
+                ))}
+                {/* Pick 1 row */}
+                {["Pick 1","Pick 2"].map((label,slot)=>(
+                  <>
+                    <div key={label} style={{padding:"7px 10px",fontSize:11,color:T.textMute,borderBottom:slot===0?"1px solid rgba(255,255,255,0.04)":"none",display:"flex",alignItems:"center"}}>
+                      {label}
+                    </div>
+                    {players.map(p=>{
+                      const key=`${p}_${grp}_${slot}`;
+                      const q=data.groupQualifiers[key];
+                      const team=q?.team||"";
+                      const qualified=q?.qualified;
+                      return (
+                        <div key={p} style={{
+                          padding:"7px 6px",textAlign:"center",fontSize:11,fontWeight:600,
+                          background: qualified===true?"rgba(34,197,94,0.1)":qualified===false?"rgba(239,68,68,0.08)":"transparent",
+                          borderLeft:"1px solid rgba(255,255,255,0.04)",
+                          borderBottom:slot===0?"1px solid rgba(255,255,255,0.04)":"none",
+                          color: qualified===true?T.green:qualified===false?"#ef4444":T.text,
+                        }}>
+                          {team?(
+                            <>
+                              <div style={{fontSize:11}}>{team}</div>
+                              <div style={{fontSize:9,marginTop:2}}>
+                                {qualified===true?"✅ +2pts":qualified===false?"❌ 0pts":"⏳"}
+                              </div>
+                            </>
+                          ):<span style={{color:T.textMute}}>—</span>}
+                        </div>
+                      );
+                    })}
+                  </>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  return (
+    <div style={S.sec}>
+      <h2 style={S.h2}>👁 All Tournament Picks</h2>
+      <p style={{color:T.textDim, fontSize:13, marginBottom:16}}>
+        Live view of everyone's tournament predictions. Updates immediately when anyone changes their picks.
+        {actuals._winner && <span style={{color:T.green, marginLeft:6}}>✅ Actuals confirmed</span>}
+      </p>
+
+      {/* Tournament predictions table */}
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%", borderCollapse:"separate", borderSpacing:"0 0"}}>
+          <thead>
+            <tr>
+              <th style={{...thStyle, textAlign:"left", minWidth:100}}>Prediction</th>
+              {players.map((p, i) => (
+                <th key={p} style={{...thStyle, minWidth:110}}>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                    <div style={{fontSize:16}}>{medals[i] || `#${i+1}`}</div>
+                    <div style={{fontWeight:800, color:p===player?T.gold:T.text, fontSize:12}}>{p}</div>
+                    {p===player && <div style={{background:"rgba(240,192,64,0.2)",color:T.gold,borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>YOU</div>}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {PRED_FIELDS.map((f,fi) => {
+              const actual = actuals[f.actualKey];
+              const picks = players.map(p => data.predictions[p]?.[f.key] || "");
+              const pickCounts = {};
+              picks.forEach(pk => { if(pk) pickCounts[pk] = (pickCounts[pk]||0)+1; });
+              const topPick = Object.entries(pickCounts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+              const isLastRow = fi === PRED_FIELDS.length - 1;
+
+              return (
+                <tr key={f.key}>
+                  <td style={{...tdStyle, textAlign:"left", paddingLeft:12, borderBottom: isLastRow?"none":"1px solid rgba(255,255,255,0.04)"}}>
+                    <div style={{fontWeight:700, fontSize:12, color:T.text}}>{f.label}</div>
+                    <div style={{fontSize:10, color:T.textMute}}>{f.pts} pts</div>
+                    {actual && <div style={{fontSize:10, color:T.green, fontWeight:700, marginTop:2}}>→ {actual}</div>}
+                  </td>
+                  {players.map(p => {
+                    const pick = data.predictions[p]?.[f.key] || "";
+                    const isCorrect = actual && pick && pick === actual;
+                    const isWrong   = actual && pick && pick !== actual;
+                    const isTop     = !actual && pick && pick === topPick && pickCounts[topPick] > 1;
+                    const isMe      = p === player;
+                    return (
+                      <td key={p} style={{
+                        ...tdStyle,
+                        background: isCorrect?"rgba(34,197,94,0.12)":isWrong?"rgba(239,68,68,0.08)":isMe?"rgba(240,192,64,0.06)":T.bgCard2,
+                        border:`1px solid ${isMe?"rgba(240,192,64,0.2)":"rgba(255,255,255,0.04)"}`,
+                        borderBottom: isLastRow?"none":"1px solid rgba(255,255,255,0.04)",
+                      }}>
+                        {pick ? (
+                          <div style={{textAlign:"center"}}>
+                            <div style={{fontWeight:700,fontSize:12,color:isCorrect?T.green:isWrong?"#ef4444":T.text}}>{pick}</div>
+                            {isCorrect && <div style={{fontSize:9,color:T.green}}>✅ +{f.pts}pts</div>}
+                            {isWrong   && <div style={{fontSize:9,color:"#ef4444"}}>❌ 0pts</div>}
+                            {isTop&&!actual && <div style={{fontSize:9,color:T.gold}}>👥 popular</div>}
+                          </div>
+                        ) : (
+                          <div style={{textAlign:"center",color:T.textMute,fontSize:11}}>—</div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+            {/* Deductions row */}
+            <tr>
+              <td style={{...tdStyle,textAlign:"left",paddingLeft:12,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                <div style={{fontWeight:700,fontSize:12,color:"#ef4444"}}>📉 Deductions</div>
+              </td>
+              {players.map(p=>(
+                <td key={p} style={{...tdStyle,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                  <div style={{textAlign:"center",color:(data.deductions[p]||0)>0?"#ef4444":T.textMute,fontWeight:700,fontSize:12}}>
+                    {(data.deductions[p]||0)>0?`−${data.deductions[p]}`:"—"}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Consensus insight */}
+      <div style={{...S.card,marginTop:14}}>
+        <div style={S.blockTitle}>🤝 Group Consensus</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8}}>
+          {PRED_FIELDS.map(f=>{
+            const picks=players.map(p=>data.predictions[p]?.[f.key]||"").filter(Boolean);
+            if(!picks.length) return null;
+            const counts={};
+            picks.forEach(pk=>{counts[pk]=(counts[pk]||0)+1;});
+            const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+            const top=sorted[0];
+            const pct=Math.round((top[1]/players.length)*100);
+            return (
+              <div key={f.key} style={{background:T.bgCard2,borderRadius:10,padding:"10px 12px",border:"1px solid rgba(255,255,255,0.06)"}}>
+                <div style={{fontSize:10,color:T.textDim,marginBottom:3}}>{f.label}</div>
+                <div style={{fontWeight:800,fontSize:13,color:T.text}}>{top[0]}</div>
+                <div style={{marginTop:5,background:"rgba(255,255,255,0.06)",borderRadius:999,height:4,overflow:"hidden"}}>
+                  <div style={{width:`${pct}%`,height:"100%",background:T.gold,borderRadius:999}}/>
+                </div>
+                <div style={{fontSize:10,color:T.textMute,marginTop:3}}>{top[1]}/{players.length} ({pct}%)</div>
+                {sorted.length>1&&<div style={{fontSize:10,color:T.textMute}}>2nd: {sorted[1][0]} ({sorted[1][1]})</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Qualifier picks — only after group stage ends */}
+      {groupStageOver ? (
+        <QualifierPicks/>
+      ) : (
+        <div style={{...S.card,marginTop:14,textAlign:"center",padding:"24px 16px"}}>
+          <div style={{fontSize:24,marginBottom:8}}>⏳</div>
+          <div style={{fontWeight:700,color:T.text,marginBottom:4}}>Group Qualifier picks revealed after Jun 27</div>
+          <div style={{fontSize:12,color:T.textDim}}>
+            Everyone's group qualifier predictions will appear here once the group stage ends on June 27 so nobody can copy each other's picks!
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const thStyle = {
+  padding:"10px 8px",
+  background:T.bgCard,
+  color:T.textDim,
+  fontSize:11,
+  fontWeight:700,
+  textTransform:"uppercase",
+  letterSpacing:"0.5px",
+  textAlign:"center",
+  borderBottom:`1px solid rgba(255,255,255,0.08)`,
+};
+const tdStyle = {
+  padding:"10px 8px",
+  background:T.bgCard2,
+  textAlign:"center",
+  borderRadius:0,
+  transition:"background .2s",
+};
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 function Toast({toast}) {
