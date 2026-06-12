@@ -1,6 +1,7 @@
 import { loadData, saveData, subscribeToData } from "./firebase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis } from "recharts";
+import { syncAllResults, fetchFIFARankings } from "./api-football.js";
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const T = {
@@ -1860,7 +1861,6 @@ function AdminResults({data,update,toast_}) {
     setSyncing(true);
     setSyncLog(null);
     try {
-      const { syncAllResults } = await import("./api-football.js");
       const { newData, summary } = await syncAllResults(data);
       update(() => newData);
       setSyncLog(summary);
@@ -1908,7 +1908,6 @@ function AdminResults({data,update,toast_}) {
             style={{...S.btn,background:"rgba(240,192,64,0.12)",color:T.gold,border:"1px solid rgba(240,192,64,0.25)",fontSize:13,padding:"9px 14px",boxShadow:"none"}}
             onClick={async()=>{
               try {
-                const {fetchFIFARankings}=await import("./api-football.js");
                 const r=await fetchFIFARankings();
                 update(d=>{d.teamRankings=r;return d;});
                 toast_(`✅ ${Object.keys(r).length} team rankings loaded`);
