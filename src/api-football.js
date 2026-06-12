@@ -127,9 +127,9 @@ export async function syncAllResults(currentData) {
     }
 
     // Get stage from stageNormalized (preferred) or stage
-    const stage = m.stageNormalized || m.stage || "";
+    const stage = (m.stageNormalized || m.stage || "").toLowerCase();
     const isGroup = stage.startsWith("group_");
-    const isKnockout = !isGroup && stage !== "";
+    const isKnockout = !isGroup && stage !== "" && stage !== "group";
 
     // ── Group stage match ─────────────────────────────────────────────────
     if (isGroup && isFinished) {
@@ -162,7 +162,7 @@ export async function syncAllResults(currentData) {
         ourId = MATCH_ID_MAP[key];
       } else {
         // Assign by stage slot counter
-        const range = KNOCKOUT_STAGE_MAP[stage];
+        const range = KNOCKOUT_STAGE_MAP[stage] || KNOCKOUT_STAGE_MAP[m.stageNormalized] || KNOCKOUT_STAGE_MAP[m.stage];
         if (range) {
           if (!knockoutSlotCounters[stage]) knockoutSlotCounters[stage] = range.start;
           ourId = knockoutSlotCounters[stage];
@@ -198,32 +198,21 @@ export async function syncAllResults(currentData) {
   try {
     const json = await zFetch("/standings?year=2026");
 
-    // Zafronix may return various shapes — handle all of them
-    // Shape A: [ { group:"A", teams:[...] }, ... ]
-    // Shape B: { groups: [ { group:"A", teams:[...] } ] }
-    // Shape C: { standings: { A: [...], B: [...] } }  (object keyed by letter)
-    // Shape D: { A: [...], B: [...] }  (flat object)
+    // Zafronix actual shape: { year:2026, groups:{ A:[{team,played,...}], B:[...] } }
     let groups = [];
     if (Array.isArray(json)) {
       groups = json;
+    } else if (json.groups && !Array.isArray(json.groups) && typeof json.groups === "object") {
+      // ← actual Zafronix shape: groups is object keyed by letter
+      groups = Object.entries(json.groups).map(([k,v])=>({ group:k, teams:Array.isArray(v)?v:[] }));
     } else if (Array.isArray(json.groups)) {
       groups = json.groups;
     } else if (Array.isArray(json.standings)) {
       groups = json.standings;
     } else if (json.standings && typeof json.standings === "object") {
-      // Convert object to array: { A: [...teams] } → [{ group:"A", teams:[...] }]
-      groups = Object.entries(json.standings).map(([k,v])=>({ group:k, teams:v }));
-    } else if (typeof json === "object" && !json.error) {
-      // Try treating top-level keys as group letters
-      const letters = "ABCDEFGHIJKL".split("");
-      const found = Object.entries(json).filter(([k])=>letters.includes(k.toUpperCase()));
-      if (found.length > 0) {
-        groups = found.map(([k,v])=>({ group:k, teams:Array.isArray(v)?v:[] }));
-      }
-    }
-
-    if (groups.length === 0) {
-      summary.errors.push(`Standings: unexpected shape — ${JSON.stringify(json).slice(0,120)}`);
+      groups = Object.entries(json.standings).map(([k,v])=>({ group:k, teams:Array.isArray(v)?v:[] }));
+    } else {
+      summary.errors.push(`Standings: unexpected shape — ${JSON.stringify(json).slice(0,150)}`);
     }
 
     const players = [...new Set([
