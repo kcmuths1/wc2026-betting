@@ -64,7 +64,19 @@ async function syncAllResults(currentData) {
       if(!gl||gl.length!==1)continue;
       const teams=(grp.teams||grp.standings||[]).sort((a,b)=>(a.position||a.rank||99)-(b.position||b.rank||99));
       if(teams.length<2)continue;
-      if(!teams.some(t=>(t.played||t.gamesPlayed||t.mp||0)>0))continue;
+      // Each group has 4 teams × 3 games = 6 total matches
+      // Sum all played counts and divide by 2 (each match counted twice)
+      const totalPlayed=teams.reduce((s,t)=>s+(t.played||t.gamesPlayed||t.mp||0),0)/2;
+      if(totalPlayed<6){
+        // Group not done yet — reset any previously set qualifiers back to null
+        for(const p of players)for(let s=0;s<2;s++){
+          const key=`${p}_${gl}_${s}`;
+          if(newData.groupQualifiers[key]?.qualified!==undefined&&newData.groupQualifiers[key]?.qualified!==null){
+            newData.groupQualifiers[key].qualified=null;
+          }
+        }
+        continue;
+      }
       const top2=teams.slice(0,2).map(t=>_zNorm(t.team||t.name||t.teamName||"")).filter(Boolean);
       if(top2.length<2)continue;
       for(const p of players)for(let s=0;s<2;s++){
