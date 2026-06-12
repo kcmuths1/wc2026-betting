@@ -18,11 +18,31 @@ async function syncAllResults(currentData) {
   const summary={matchesUpdated:0,knockoutNamesUpdated:0,qualifiersUpdated:0,topScorer:null,awards:{},errors:[],rawAPINames:[]};
   const newData=JSON.parse(JSON.stringify(currentData));
   if(!newData.knockoutTeams)newData.knockoutTeams={};
+  if(!newData.matchScorers)newData.matchScorers={};
   const ids=Object.assign({},_ZAF_IDS);
   let matches=[];
   try{const j=await zFetch("/matches?year=2026");matches=Array.isArray(j)?j:(j.matches||j.data||[]);}
   catch(e){summary.errors.push(`Matches: ${e.message}`);return{newData,summary};}
   const koCounters={};
+
+  // Helper to extract scorers from a match object
+  const extractScorers=(m,home,away)=>{
+    const goals=m.goals||m.scorers||m.events||[];
+    if(!goals.length)return null;
+    const homeGoals=[],awayGoals=[];
+    for(const g of goals){
+      const name=g.player||g.name||g.scorer||g.playerName||"";
+      const team=_zNorm(g.team||g.teamName||"");
+      const min=g.minute||g.min||"";
+      const isOG=g.type==="own_goal"||g.ownGoal||g.type==="OG";
+      const entry=`${name}${min?" "+min+"'":""}${isOG?" (OG)":""}`;
+      if(team===home)homeGoals.push(entry);
+      else if(team===away)awayGoals.push(entry);
+      else homeGoals.push(entry); // fallback
+    }
+    return{home:homeGoals,away:awayGoals};
+  };
+
   for(const m of matches){
     const home=_zNorm(m.homeTeam||m.home_team||m.team1||"");
     const away=_zNorm(m.awayTeam||m.away_team||m.team2||"");
@@ -33,10 +53,16 @@ async function syncAllResults(currentData) {
     if(done)summary.rawAPINames.push(`${home} ${hs}-${as2} ${away}`);
     const stage=(m.stageNormalized||m.stage||"").toLowerCase();
     const isGrp=stage.startsWith("group_");
+
     if(isGrp&&done){
       const key=`${home}|||${away}`;const mid=ids[key];
-      if(mid){const sc=`${hs}-${as2}`;const win=hs>as2?home:as2>hs?away:"Draw";
-        if(!newData.matchActuals[mid]||newData.matchActuals[mid].score!==sc){newData.matchActuals[mid]={score:sc,winner:win};summary.matchesUpdated++;}}
+      if(mid){
+        const sc=`${hs}-${as2}`;const win=hs>as2?home:as2>hs?away:"Draw";
+        if(!newData.matchActuals[mid]||newData.matchActuals[mid].score!==sc){newData.matchActuals[mid]={score:sc,winner:win};summary.matchesUpdated++;}
+        // Store scorers
+        const scorers=extractScorers(m,home,away);
+        if(scorers)newData.matchScorers[mid]=scorers;
+      }
     }
     if(!isGrp&&stage&&stage!=="group"&&home&&away&&!home.includes("Winner")&&!away.includes("Winner")){
       const key=`${home}|||${away}`;let oid=ids[key];
@@ -44,11 +70,42 @@ async function syncAllResults(currentData) {
       if(oid){
         const prev=newData.knockoutTeams[oid];
         if(!prev||prev.home!==home||prev.away!==away){newData.knockoutTeams[oid]={home,away};summary.knockoutNamesUpdated++;}
-        if(done){const sc=`${hs}-${as2}`;const win=hs>as2?home:as2>hs?away:"Draw";
-          if(!newData.matchActuals[oid]||newData.matchActuals[oid].score!==sc){newData.matchActuals[oid]={score:sc,winner:win};summary.matchesUpdated++;}}
+        if(done){
+          const sc=`${hs}-${as2}`;const win=hs>as2?home:as2>hs?away:"Draw";
+          if(!newData.matchActuals[oid]||newData.matchActuals[oid].score!==sc){newData.matchActuals[oid]={score:sc,winner:win};summary.matchesUpdated++;}
+          const scorers=extractScorers(m,home,away);
+          if(scorers)newData.matchScorers[oid]=scorers;
+        }
       }
     }
   }
+
+  // ── Bracket sync — fills knockout team names round by round ──────────────
+  try{
+    const j=await zFetch("/bracket?year=2026");
+    // bracket returns rounds, each with matches containing homeTeam/awayTeam
+    const rounds=j.rounds||j.bracket||j.data||[];
+    for(const round of(Array.isArray(rounds)?rounds:[])){
+      const roundMatches=round.matches||round.games||[];
+      const stage=(round.stage||round.name||round.round||"").toLowerCase().replace(/\s/g,"_");
+      const range=_ZAF_KO[stage]||_ZAF_KO[round.stageNormalized||""];
+      if(!range)continue;
+      let slot=range.s;
+      for(const bm of roundMatches){
+        const bHome=_zNorm(bm.homeTeam||bm.home||bm.team1||"");
+        const bAway=_zNorm(bm.awayTeam||bm.away||bm.team2||"");
+        if(!bHome||!bAway||bHome.includes("Winner")||bAway.includes("Winner"))continue;
+        if(slot<=range.e){
+          const prev=newData.knockoutTeams[slot];
+          if(!prev||prev.home!==bHome||prev.away!==bAway){
+            newData.knockoutTeams[slot]={home:bHome,away:bAway};
+            summary.knockoutNamesUpdated++;
+          }
+          slot++;
+        }
+      }
+    }
+  }catch(e){summary.errors.push(`Bracket: ${e.message}`);}
   try{
     const j=await zFetch("/standings?year=2026");
     let groups=[];
@@ -435,7 +492,7 @@ const playerColor = name => {
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // Storage handled by Firebase (see firebase.js)
-const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:2000, playerPasswords:{}, playerTimezones:{}, knockoutTeams:{}, teamRankings:{} });
+const initData = () => ({ predictions:{}, matchPredictions:{}, matchActuals:{}, groupQualifiers:{}, deductions:{}, changeLog:[], pointsHistory:{}, prizePool:2000, playerPasswords:{}, playerTimezones:{}, knockoutTeams:{}, teamRankings:{}, matchScorers:{} });
 
 // ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────────
 // All match times are stored in ET (Eastern Daylight Time = UTC-4 during summer).
@@ -1711,8 +1768,8 @@ function MatchCard({m, player, data, setPred, tz}) {
         </div>
       )}
 
-      {/* Input row */}
-      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+      {/* Result + scorers row */}
+      <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
         <div style={{flex:1}}>
           <div style={{fontSize:10,color:"#64748b",marginBottom:3}}>Your prediction</div>
           <input
@@ -1733,6 +1790,29 @@ function MatchCard({m, player, data, setPred, tz}) {
           </div>
         )}
       </div>
+
+      {/* Scorers — shown when result is known */}
+      {actual && (() => {
+        const scorers = data.matchScorers?.[m.id];
+        if(!scorers) return null;
+        const hasGoals = (scorers.home?.length||0)+(scorers.away?.length||0)>0;
+        if(!hasGoals) return null;
+        return (
+          <div style={{marginTop:8,display:"flex",gap:6,fontSize:11}}>
+            <div style={{flex:1}}>
+              {scorers.home?.map((g,i)=>(
+                <div key={i} style={{color:T.textDim,padding:"1px 0"}}>⚽ {g}</div>
+              ))}
+            </div>
+            <div style={{width:1,background:T.border}}/>
+            <div style={{flex:1,textAlign:"right"}}>
+              {scorers.away?.map((g,i)=>(
+                <div key={i} style={{color:T.textDim,padding:"1px 0"}}>{g} ⚽</div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Prediction result indicator */}
       {predResult&&(
