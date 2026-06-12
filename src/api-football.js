@@ -1,25 +1,27 @@
 // ─── API-FOOTBALL INTEGRATION ────────────────────────────────────────────────
-// https://www.api-football.com
-// Free tier: 100 requests/day
-// World Cup 2026: league ID = 1, season = 2026
-
 const API_KEY   = "77e57148bd2431c24ab6f7bd7fd9ad05";
 const BASE_URL  = "https://v3.football.api-sports.io";
 const LEAGUE_ID = 1;
 const SEASON    = 2026;
 
-// Team name normalisation — API uses different names to ours
 const NAME_MAP = {
-  "United States":      "USA",
-  "Korea Republic":     "South Korea",
-  "Bosnia Herzegovina": "Bosnia & Herz.",
-  "Bosnia":             "Bosnia & Herz.",
-  "Côte d'Ivoire":      "Ivory Coast",
-  "Curacao":            "Curaçao",
-  "Turkey":             "Türkiye",
-  "Turkiye":            "Türkiye",
-  "Congo DR":           "DR Congo",
-  "Republic of Ireland":"Ireland",
+  "United States":               "USA",
+  "Korea Republic":              "South Korea",
+  "Bosnia Herzegovina":          "Bosnia & Herz.",
+  "Bosnia":                      "Bosnia & Herz.",
+  "Côte d'Ivoire":               "Ivory Coast",
+  "Cote d'Ivoire":               "Ivory Coast",
+  "Curacao":                     "Curaçao",
+  "Turkey":                      "Türkiye",
+  "Turkiye":                     "Türkiye",
+  "Congo DR":                    "DR Congo",
+  "Democratic Republic of Congo":"DR Congo",
+  "Republic of Ireland":         "Ireland",
+  "Czech Republic":              "Czechia",
+  "Cape Verde Islands":          "Cape Verde",
+  // South Africa sometimes appears with different spelling
+  "South Africa":                "South Africa",
+  "RSA":                         "South Africa",
 };
 const norm = n => NAME_MAP[n] || n;
 
@@ -28,7 +30,11 @@ async function apiFetch(endpoint) {
     headers: { "x-apisports-key": API_KEY },
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
-  return res.json();
+  const json = await res.json();
+  if (json.errors && Object.keys(json.errors).length > 0) {
+    throw new Error(`API error: ${JSON.stringify(json.errors)}`);
+  }
+  return json;
 }
 
 // ─── 1. ALL FIXTURES (finished + upcoming) ────────────────────────────────────
@@ -186,12 +192,13 @@ export async function fetchTournamentAwards() {
 // ─── FULL SYNC ────────────────────────────────────────────────────────────────
 export async function syncAllResults(currentData) {
   const summary = {
-    matchesUpdated:     0,
+    matchesUpdated:       0,
     knockoutNamesUpdated: 0,
-    qualifiersUpdated:  0,
-    topScorer:          null,
-    awards:             {},
-    errors:             [],
+    qualifiersUpdated:    0,
+    topScorer:            null,
+    awards:               {},
+    errors:               [],
+    rawAPINames:          [], // raw names from API for debugging
   };
 
   const newData = JSON.parse(JSON.stringify(currentData));
@@ -228,6 +235,16 @@ export async function syncAllResults(currentData) {
       67:["Panama","England"],68:["Croatia","Ghana"],69:["Colombia","Portugal"],
       70:["DR Congo","Uzbekistan"],71:["Algeria","Austria"],72:["Jordan","Argentina"],
     };
+
+    // Capture raw API names of finished matches for debug
+    for (const fx of data.response || []) {
+      const status = fx.fixture.status.short;
+      if (["FT","AET","PEN"].includes(status)) {
+        summary.rawAPINames.push(
+          `${fx.teams.home.name} ${fx.goals.home}-${fx.goals.away} ${fx.teams.away.name}`
+        );
+      }
+    }
 
     for (const [id, [home, away]] of Object.entries(GROUP_PAIRS_REVERSE)) {
       const key = `${home}|||${away}`;
