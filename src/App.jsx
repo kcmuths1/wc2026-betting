@@ -327,7 +327,13 @@ function getMatchTeams(m, data) {
 }
 const fmtDate = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",weekday:"short"});
 const fmtShort = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
-const playerColor = name => PLAYER_COLORS[FRIENDS.indexOf(name)%PLAYER_COLORS.length] || "#888";
+// Hash name → consistent color regardless of join order
+const playerColor = name => {
+  if (!name) return "#888";
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return PLAYER_COLORS[Math.abs(h) % PLAYER_COLORS.length];
+};
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // Storage handled by Firebase (see firebase.js)
