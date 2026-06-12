@@ -197,7 +197,34 @@ export async function syncAllResults(currentData) {
   // ── 2. Group standings → auto-qualify ────────────────────────────────────
   try {
     const json = await zFetch("/standings?year=2026");
-    const groups = Array.isArray(json) ? json : (json.groups || json.standings || json.data || []);
+
+    // Zafronix may return various shapes — handle all of them
+    // Shape A: [ { group:"A", teams:[...] }, ... ]
+    // Shape B: { groups: [ { group:"A", teams:[...] } ] }
+    // Shape C: { standings: { A: [...], B: [...] } }  (object keyed by letter)
+    // Shape D: { A: [...], B: [...] }  (flat object)
+    let groups = [];
+    if (Array.isArray(json)) {
+      groups = json;
+    } else if (Array.isArray(json.groups)) {
+      groups = json.groups;
+    } else if (Array.isArray(json.standings)) {
+      groups = json.standings;
+    } else if (json.standings && typeof json.standings === "object") {
+      // Convert object to array: { A: [...teams] } → [{ group:"A", teams:[...] }]
+      groups = Object.entries(json.standings).map(([k,v])=>({ group:k, teams:v }));
+    } else if (typeof json === "object" && !json.error) {
+      // Try treating top-level keys as group letters
+      const letters = "ABCDEFGHIJKL".split("");
+      const found = Object.entries(json).filter(([k])=>letters.includes(k.toUpperCase()));
+      if (found.length > 0) {
+        groups = found.map(([k,v])=>({ group:k, teams:Array.isArray(v)?v:[] }));
+      }
+    }
+
+    if (groups.length === 0) {
+      summary.errors.push(`Standings: unexpected shape — ${JSON.stringify(json).slice(0,120)}`);
+    }
 
     const players = [...new Set([
       ...Object.keys(newData.predictions),
@@ -205,24 +232,24 @@ export async function syncAllResults(currentData) {
     ])];
 
     for (const grp of groups) {
-      // Group letter from name or id
-      const grpLetter = (grp.group || grp.name || grp.groupName || "")
-        .replace(/^[Gg]roup\s*/,"").trim().toUpperCase();
+      const grpLetter = (grp.group || grp.name || grp.groupName || grp.stage || "")
+        .replace(/^[Gg]roup[\s_]*/,"").trim().toUpperCase();
       if (!grpLetter || grpLetter.length !== 1) continue;
 
-      // Teams sorted by position (API should already be sorted, but sort anyway)
-      const teams = (grp.teams || grp.standings || [])
-        .sort((a,b) => (a.position||a.rank||99) - (b.position||b.rank||99));
-
+      const teams = (grp.teams || grp.standings || grp.entries || [])
+        .sort((a,b) => (a.position||a.rank||a.pos||99) - (b.position||b.rank||b.pos||99));
       if (teams.length < 2) continue;
 
-      // Only mark qualified if group has played enough games (at least 1 game each)
       const hasResults = teams.some(t =>
-        (t.played||t.gamesPlayed||t.matchesPlayed||0) > 0
+        (t.played||t.gamesPlayed||t.matchesPlayed||t.mp||0) > 0
       );
       if (!hasResults) continue;
 
-      const top2 = teams.slice(0,2).map(t => norm(t.team || t.name || t.teamName || ""));
+      const top2 = teams.slice(0,2).map(t =>
+        norm(t.team || t.name || t.teamName || t.country || "")
+      ).filter(Boolean);
+
+      if (top2.length < 2) continue;
 
       for (const player of players) {
         for (let slot = 0; slot < 2; slot++) {
