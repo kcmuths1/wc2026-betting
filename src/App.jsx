@@ -1,7 +1,92 @@
 import { loadData, saveData, subscribeToData } from "./firebase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis } from "recharts";
-import { syncAllResults, fetchFIFARankings } from "./api-football.js";
+
+// ─── ZAFRONIX API (inlined — no separate module) ──────────────────────────────
+const _ZAF_KEY  = "zwc_free_85b9322115f4fe82a4e3a87a";
+const _ZAF_BASE = "https://api.zafronix.com/fifa/worldcup/v1";
+const _ZAF_NAMES = {"United States":"USA","Korea Republic":"South Korea","Republic of Korea":"South Korea","Bosnia Herzegovina":"Bosnia & Herz.","Bosnia-Herzegovina":"Bosnia & Herz.","Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast","Curacao":"Curaçao","Turkey":"Türkiye","Czech Republic":"Czechia","Cape Verde Islands":"Cape Verde","Congo DR":"DR Congo","Democratic Republic of Congo":"DR Congo"};
+const _zNorm = n => _ZAF_NAMES[n] || n;
+const _ZAF_IDS = {"Mexico|||South Africa":1,"South Korea|||Czechia":2,"Canada|||Bosnia & Herz.":3,"USA|||Paraguay":4,"Qatar|||Switzerland":5,"Brazil|||Morocco":6,"Haiti|||Scotland":7,"Australia|||Türkiye":8,"Germany|||Curaçao":9,"Netherlands|||Japan":10,"Ivory Coast|||Ecuador":11,"Sweden|||Tunisia":12,"Spain|||Cape Verde":13,"Belgium|||Egypt":14,"Saudi Arabia|||Uruguay":15,"Iran|||New Zealand":16,"France|||Senegal":17,"Iraq|||Norway":18,"Argentina|||Algeria":19,"Austria|||Jordan":20,"Portugal|||DR Congo":21,"England|||Croatia":22,"Ghana|||Panama":23,"Uzbekistan|||Colombia":24,"Czechia|||South Africa":25,"Switzerland|||Bosnia & Herz.":26,"Canada|||Qatar":27,"Mexico|||South Korea":28,"USA|||Australia":29,"Scotland|||Morocco":30,"Brazil|||Haiti":31,"Türkiye|||Paraguay":32,"Netherlands|||Sweden":33,"Germany|||Ivory Coast":34,"Ecuador|||Curaçao":35,"Tunisia|||Japan":36,"Spain|||Saudi Arabia":37,"Belgium|||Iran":38,"Uruguay|||Cape Verde":39,"New Zealand|||Egypt":40,"Argentina|||Austria":41,"France|||Iraq":42,"Norway|||Senegal":43,"Jordan|||Algeria":44,"Portugal|||Uzbekistan":45,"England|||Ghana":46,"Panama|||Croatia":47,"Colombia|||DR Congo":48,"Switzerland|||Canada":49,"Bosnia & Herz.|||Qatar":50,"Scotland|||Brazil":51,"Morocco|||Haiti":52,"Czechia|||Mexico":53,"South Africa|||South Korea":54,"Curaçao|||Ivory Coast":55,"Ecuador|||Germany":56,"Japan|||Sweden":57,"Tunisia|||Netherlands":58,"Türkiye|||USA":59,"Paraguay|||Australia":60,"Norway|||France":61,"Senegal|||Iraq":62,"Cape Verde|||Saudi Arabia":63,"Uruguay|||Spain":64,"Egypt|||Iran":65,"New Zealand|||Belgium":66,"Panama|||England":67,"Croatia|||Ghana":68,"Colombia|||Portugal":69,"DR Congo|||Uzbekistan":70,"Algeria|||Austria":71,"Jordan|||Argentina":72};
+const _ZAF_KO = {"round_of_32":{s:73,e:88},"r32":{s:73,e:88},"round_of_16":{s:89,e:96},"r16":{s:89,e:96},"quarter_final":{s:97,e:100},"qf":{s:97,e:100},"semi_final":{s:101,e:102},"sf":{s:101,e:102},"third_place":{s:103,e:103},"thirdPlace":{s:103,e:103},"final":{s:104,e:104}};
+async function zFetch(ep) {
+  const r = await fetch(`${_ZAF_BASE}${ep}`,{headers:{"X-API-Key":_ZAF_KEY}});
+  if(!r.ok){const b=await r.text();throw new Error(`Zafronix ${r.status}: ${b.slice(0,150)}`);}
+  return r.json();
+}
+async function syncAllResults(currentData) {
+  const summary={matchesUpdated:0,knockoutNamesUpdated:0,qualifiersUpdated:0,topScorer:null,awards:{},errors:[],rawAPINames:[]};
+  const newData=JSON.parse(JSON.stringify(currentData));
+  if(!newData.knockoutTeams)newData.knockoutTeams={};
+  const ids=Object.assign({},_ZAF_IDS);
+  let matches=[];
+  try{const j=await zFetch("/matches?year=2026");matches=Array.isArray(j)?j:(j.matches||j.data||[]);}
+  catch(e){summary.errors.push(`Matches: ${e.message}`);return{newData,summary};}
+  const koCounters={};
+  for(const m of matches){
+    const home=_zNorm(m.homeTeam||m.home_team||m.team1||"");
+    const away=_zNorm(m.awayTeam||m.away_team||m.team2||"");
+    if(!home||!away)continue;
+    const hs=m.homeScore??m.home_score??m.score?.home??m.result?.home??null;
+    const as2=m.awayScore??m.away_score??m.score?.away??m.result?.away??null;
+    const done=hs!==null&&hs!==undefined&&as2!==null&&as2!==undefined&&m.status!=="scheduled"&&m.status!=="upcoming";
+    if(done)summary.rawAPINames.push(`${home} ${hs}-${as2} ${away}`);
+    const stage=(m.stageNormalized||m.stage||"").toLowerCase();
+    const isGrp=stage.startsWith("group_");
+    if(isGrp&&done){
+      const key=`${home}|||${away}`;const mid=ids[key];
+      if(mid){const sc=`${hs}-${as2}`;const win=hs>as2?home:as2>hs?away:"Draw";
+        if(!newData.matchActuals[mid]||newData.matchActuals[mid].score!==sc){newData.matchActuals[mid]={score:sc,winner:win};summary.matchesUpdated++;}}
+    }
+    if(!isGrp&&stage&&stage!=="group"&&home&&away&&!home.includes("Winner")&&!away.includes("Winner")){
+      const key=`${home}|||${away}`;let oid=ids[key];
+      if(!oid){const range=_ZAF_KO[stage];if(range){if(!koCounters[stage])koCounters[stage]=range.s;oid=koCounters[stage];if(koCounters[stage]<=range.e)koCounters[stage]++;ids[key]=oid;}}
+      if(oid){
+        const prev=newData.knockoutTeams[oid];
+        if(!prev||prev.home!==home||prev.away!==away){newData.knockoutTeams[oid]={home,away};summary.knockoutNamesUpdated++;}
+        if(done){const sc=`${hs}-${as2}`;const win=hs>as2?home:as2>hs?away:"Draw";
+          if(!newData.matchActuals[oid]||newData.matchActuals[oid].score!==sc){newData.matchActuals[oid]={score:sc,winner:win};summary.matchesUpdated++;}}
+      }
+    }
+  }
+  try{
+    const j=await zFetch("/standings?year=2026");
+    let groups=[];
+    if(Array.isArray(j))groups=j;
+    else if(j.groups&&!Array.isArray(j.groups))groups=Object.entries(j.groups).map(([k,v])=>({group:k,teams:Array.isArray(v)?v:[]}));
+    else if(Array.isArray(j.groups))groups=j.groups;
+    else if(j.standings&&!Array.isArray(j.standings))groups=Object.entries(j.standings).map(([k,v])=>({group:k,teams:Array.isArray(v)?v:[]}));
+    else if(Array.isArray(j.standings))groups=j.standings;
+    else summary.errors.push(`Standings shape: ${JSON.stringify(j).slice(0,120)}`);
+    const players=[...new Set([...Object.keys(newData.predictions),...Object.keys(newData.deductions)])];
+    for(const grp of groups){
+      const gl=(grp.group||grp.name||"").replace(/^[Gg]roup[\s_]*/,"").trim().toUpperCase();
+      if(!gl||gl.length!==1)continue;
+      const teams=(grp.teams||grp.standings||[]).sort((a,b)=>(a.position||a.rank||99)-(b.position||b.rank||99));
+      if(teams.length<2)continue;
+      if(!teams.some(t=>(t.played||t.gamesPlayed||t.mp||0)>0))continue;
+      const top2=teams.slice(0,2).map(t=>_zNorm(t.team||t.name||t.teamName||"")).filter(Boolean);
+      if(top2.length<2)continue;
+      for(const p of players)for(let s=0;s<2;s++){
+        const key=`${p}_${gl}_${s}`;const pick=newData.groupQualifiers[key]?.team;
+        if(!pick||!newData.groupQualifiers[key])continue;
+        newData.groupQualifiers[key].qualified=top2.some(t=>t===pick||t.toLowerCase()===pick.toLowerCase());
+        summary.qualifiersUpdated++;
+      }
+    }
+  }catch(e){summary.errors.push(`Standings: ${e.message}`);}
+  try{
+    const j=await zFetch("/tournaments/2026");const t=j.tournament||j;
+    if(t.champion){newData.matchActuals._winner=_zNorm(t.champion);summary.awards.winner=t.champion;}
+    if(t.runnerUp){newData.matchActuals._runnerUp=_zNorm(t.runnerUp);summary.awards.runnerUp=t.runnerUp;}
+    if(t.thirdPlace){newData.matchActuals._thirdPlace=_zNorm(t.thirdPlace);summary.awards.thirdPlace=t.thirdPlace;}
+    if(t.topScorer?.player&&!summary.topScorer){newData.matchActuals._goldenBoot=t.topScorer.player;summary.topScorer={name:t.topScorer.player,goals:t.topScorer.goals};}
+  }catch(e){summary.errors.push(`Awards: ${e.message}`);}
+  return{newData,summary};
+}
+async function fetchFIFARankings() {
+  return {"France":1,"Spain":2,"Argentina":3,"England":4,"Portugal":5,"Brazil":6,"Netherlands":7,"Morocco":8,"Belgium":9,"Germany":10,"Croatia":11,"Colombia":13,"Senegal":14,"Mexico":15,"USA":16,"Uruguay":17,"Japan":18,"Switzerland":19,"Ecuador":25,"South Korea":23,"Austria":27,"Norway":29,"Türkiye":30,"Sweden":35,"Algeria":31,"Iran":21,"Australia":24,"South Africa":68,"DR Congo":55,"Ghana":57,"Tunisia":33,"Egypt":36,"Saudi Arabia":56,"Ivory Coast":41,"Czechia":38,"Panama":49,"Bosnia & Herz.":62,"Qatar":37,"Canada":46,"Scotland":39,"Haiti":98,"Curaçao":82,"Cape Verde":75,"New Zealand":95,"Uzbekistan":74,"Jordan":85,"Iraq":63,"Paraguay":58};
+}
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const T = {
