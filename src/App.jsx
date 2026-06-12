@@ -589,6 +589,7 @@ export default function App() {
             {tab==="qualifiers"    && !isAdmin && <PlayerQualifiers player={player} data={data} update={update} toast_={toast_}/>}
             {tab==="profile"       && !isAdmin && <PlayerProfile player={player} data={data} update={update} toast_={toast_}/>}
             {tab==="picks"          && <AllPicksTab ranked={ranked} data={data} player={player} groupStageOver={groupStageOver}/>}
+            {tab==="h2h"           && <H2HTab ranked={ranked} scores={scores} data={data} h2hA={h2hA} setH2hA={setH2hA} h2hB={h2hB} setH2hB={setH2hB}/>}
             {tab==="groups"        && <GroupsTab/>}
             {tab==="schedule"      && <ScheduleTab data={data} playerTZ={playerTZ}/>}
             {tab==="rules"         && <RulesTab/>}
