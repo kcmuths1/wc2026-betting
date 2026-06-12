@@ -1913,20 +1913,30 @@ function AdminResults({data,update,toast_}) {
         </div>
         {syncLog && (
           <div style={{marginTop:12,fontSize:12}}>
-            <div style={{fontWeight:700,color:"#22c55e",marginBottom:4}}>Last sync results:</div>
-            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:6}}>
+            <div style={{fontWeight:700,color:T.green,marginBottom:6}}>Last sync results:</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
               {[
-                [`⚽ ${syncLog.matchesUpdated} matches updated`,"#1B5E20"],
-                [`🏟️ ${syncLog.knockoutNamesUpdated||0} knockout slots filled`,"#4A148C"],
-                [`👥 ${syncLog.qualifiersUpdated} qualifiers marked`,"#01579B"],
-                ...(syncLog.topScorer?[[`🥾 Boot: ${syncLog.topScorer.name} (${syncLog.topScorer.goals}g)`,"#E65100"]]:[] ),
-                ...(syncLog.awards?.winner?[[`🏆 Winner: ${syncLog.awards.winner}`,"#B71C1C"]]:[] ),
+                [`⚽ ${syncLog.matchesUpdated} matches updated`,T.green],
+                [`🏟️ ${syncLog.knockoutNamesUpdated||0} knockout slots`,T.textDim],
+                [`👥 ${syncLog.qualifiersUpdated} qualifiers`,T.blue],
+                ...(syncLog.topScorer?[[`🥾 ${syncLog.topScorer.name} (${syncLog.topScorer.goals}g)`,"#fb923c"]]:[] ),
               ].map(([l,c])=>(
-                <span key={l} style={{background:"#fff",borderRadius:6,padding:"2px 8px",color:c,fontWeight:600,border:`1px solid ${c}30`}}>{l}</span>
+                <span key={l} style={{background:T.bgCard2,borderRadius:6,padding:"2px 8px",color:c,fontWeight:600,border:`1px solid rgba(255,255,255,0.08)`,fontSize:11}}>{l}</span>
               ))}
             </div>
+            {/* Show raw API names for debugging name mismatches */}
+            {syncLog.rawAPINames?.length > 0 && (
+              <details style={{marginBottom:6}}>
+                <summary style={{color:T.gold,cursor:"pointer",fontSize:11,fontWeight:700}}>🔍 Debug: Raw API team names ({syncLog.rawAPINames.length} finished matches)</summary>
+                <div style={{background:T.bgCard2,borderRadius:6,padding:"8px",marginTop:4,maxHeight:120,overflowY:"auto"}}>
+                  {syncLog.rawAPINames.map((n,i)=>(
+                    <div key={i} style={{color:T.textDim,fontSize:10,padding:"1px 0"}}>{n}</div>
+                  ))}
+                </div>
+              </details>
+            )}
             {syncLog.errors?.length > 0 && syncLog.errors.map((e,i)=>(
-              <div key={i} style={{color:"#C62828",background:"#FFEBEE",borderRadius:6,padding:"4px 8px",marginBottom:3}}>⚠️ {e}</div>
+              <div key={i} style={{color:"#ef4444",background:"rgba(239,68,68,0.1)",borderRadius:6,padding:"4px 8px",marginBottom:3,fontSize:11}}>⚠️ {e}</div>
             ))}
           </div>
         )}
