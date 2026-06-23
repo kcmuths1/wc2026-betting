@@ -2023,9 +2023,9 @@ function RulesTab() {
       ))}
     </>},
     {icon:"📊",title:"Max Points Reference",color:"#006064",body:<>
-      {[["🏆 Winner","1×20","20"],["🥈 Runner-Up","1×12","12"],["🥉 3rd Place","1×8","8"],["⚽ Golden Boot","1×15","15"],["🎖 Golden Ball","1×15","15"],["🧤 Golden Glove","1×12","12"],["🎯 Exact Scores","Group 8/KO up to 30","varies"],["✅ Correct Results","Group 3/KO up to 18","varies"],["👥 Qualifiers","24×2","48"]].map(([c,v,m])=>(
+      {[["🏆 Winner","1×20","20"],["🥈 Runner-Up","1×12","12"],["🥉 3rd Place","1×8","8"],["⚽ Golden Boot","1×15","15"],["🎖 Golden Ball","1×15","15"],["🧤 Golden Glove","1×12","12"],["🎯 Exact Scores","Group 8/KO up to 30","varies"],["✅ Correct Results","Group 3/KO up to 18","varies"],["👥 Qualifiers","24×2","48"]].map(([c,v,mx])=>(
         <div key={c} style={{display:"flex",padding:"6px 10px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:4,fontSize:13,color:"#cbd5e1"}}>
-          <span style={{flex:1,fontWeight:600}}>{c}</span><span style={{color:"#64748b",minWidth:60}}>{v}</span><span style={{fontWeight:800,color:"#22c55e",minWidth:50,textAlign:"right"}}>{m} pts</span>
+          <span style={{flex:1,fontWeight:600}}>{c}</span><span style={{color:"#64748b",minWidth:60}}>{v}</span><span style={{fontWeight:800,color:"#22c55e",minWidth:50,textAlign:"right"}}>{mx} pts</span>
         </div>
       ))}
       <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:800,fontSize:15,textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 962 pts</div>
