@@ -540,29 +540,43 @@ function useCountdown(etDate, etTime) {
   return secs;
 }
 
-function Countdown({etDate, etTime}) {
+function Countdown({etDate, etTime, label=null}) {
   const secs = useCountdown(etDate, etTime);
-  if (secs <= 0) return null; // already locked, shown elsewhere
+  if (secs <= 0) return null;
 
   const d  = Math.floor(secs / 86400);
   const h  = Math.floor((secs % 86400) / 3600);
   const m  = Math.floor((secs % 3600) / 60);
   const s  = secs % 60;
 
-  const urgent  = secs < 48 * 3600;   // under 48h  → red
-  const warning = secs < 7  * 86400;  // under 7d   → amber
+  const urgent  = secs < 48 * 3600;
+  const warning = secs < 7  * 86400;
 
-  const color  = urgent ? "#C62828" : warning ? "#E65100" : "#1B5E20";
-  const bgCol  = urgent ? "#FFEBEE" : warning ? "#FFF3E0" : "#E8F5E9";
-  const label  = urgent ? "⚡ Closes soon!" : warning ? "⏳ Bet closes in" : "🕐 Bet closes in";
+  const color  = urgent ? "#ef4444" : warning ? "#f97316" : T.gold;
+  const bgCol  = urgent ? "rgba(239,68,68,0.1)" : warning ? "rgba(249,115,22,0.1)" : "rgba(240,192,64,0.1)";
+  const defaultLabel = urgent ? "⚡ Closes soon!" : warning ? "⏳ Bet closes in" : "🕐 Bet closes in";
 
   const parts = d > 0
     ? `${d}d ${h}h ${String(m).padStart(2,"0")}m`
     : `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
 
+  if(label) {
+    // Full banner mode (for predictions/qualifiers pages)
+    return (
+      <div style={{display:"flex",alignItems:"center",gap:8,background:bgCol,border:`1px solid ${color}40`,borderRadius:10,padding:"10px 14px",marginBottom:12}}>
+        <span style={{fontSize:18}}>⏰</span>
+        <div>
+          <div style={{fontSize:12,color,fontWeight:700}}>{label}</div>
+          <div style={{fontSize:18,fontWeight:900,fontFamily:"monospace",color}}>{parts}</div>
+        </div>
+        <div style={{marginLeft:"auto",fontSize:11,color:T.textDim}}>Jun 11 · 3PM ET</div>
+      </div>
+    );
+  }
+
   return (
     <div style={{display:"inline-flex",alignItems:"center",gap:5,background:bgCol,borderRadius:6,padding:"3px 8px",marginTop:4}}>
-      <span style={{fontSize:10,color,fontWeight:600}}>{label}</span>
+      <span style={{fontSize:10,color,fontWeight:600}}>{defaultLabel}</span>
       <span style={{fontSize:12,color,fontWeight:900,fontFamily:"monospace"}}>{parts}</span>
     </div>
   );
@@ -626,7 +640,7 @@ function calcScores(data) {
       const key=`${p}_${m.id}`, predicted=data.matchPredictions[key], actual=data.matchActuals[m.id]?.score;
       const rankings = data.teamRankings||{};
       const { home, away } = getMatchTeams(m, data);
-      if(actual&&predicted){ const pts=calcMatchPts(actual,predicted,rankings[home],rankings[away],m.stage); matchPts+=pts; if(pts>=POINTS.exactScore)exactCount++; else if(pts===POINTS.correctResult)resultCount++; }
+      if(actual&&predicted){ const pts=calcMatchPts(actual,predicted,rankings[home],rankings[away],m.stage); matchPts+=pts; const sp2=getStagePts(m.stage);if(pts>=sp2.exact)exactCount++; else if(pts>0&&pts<sp2.exact)resultCount++; }
     });
     Object.keys(GROUPS).forEach(grp => { for(let s=0;s<2;s++){ const q=data.groupQualifiers[`${p}_${grp}_${s}`]; if(q?.qualified===true)qualPts+=POINTS.groupQualifier; }});
     const ded=data.deductions[p]||0;
@@ -673,7 +687,7 @@ export default function App() {
   useEffect(()=>{
     loadData().then(d=>{ setData(migrateData(d)); setLoading(false); });
     const unsub = subscribeToData(remote => {
-      setData(prev => migrateData(remote) || prev);
+      if(remote) setData(migrateData(remote));
     });
     return () => unsub();
   },[]);
@@ -1598,26 +1612,7 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
   const [form,setForm]=useState({winner:pred.winner||"",runnerUp:pred.runnerUp||"",thirdPlace:pred.thirdPlace||"",goldenBoot:pred.goldenBoot||"",goldenBall:pred.goldenBall||"",goldenGlove:pred.goldenGlove||""});
   const [changed,setChanged]=useState(false);
 
-  // Countdown to tournament start
-  const TournamentCountdown = () => {
-    const secs = useCountdown("2026-06-11","15:00");
-    if(secs<=0) return null;
-    const d=Math.floor(secs/86400),h=Math.floor((secs%86400)/3600),m=Math.floor((secs%3600)/60),s=secs%60;
-    const urgent=secs<86400, warning=secs<7*86400;
-    const col=urgent?"#ef4444":warning?"#f97316":T.gold;
-    const bg=urgent?"rgba(239,68,68,0.1)":warning?"rgba(249,115,22,0.1)":"rgba(240,192,64,0.1)";
-    const parts=d>0?`${d}d ${h}h ${String(m).padStart(2,"0")}m`:`${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
-    return (
-      <div style={{display:"flex",alignItems:"center",gap:8,background:bg,border:`1px solid ${col}40`,borderRadius:10,padding:"10px 14px",marginBottom:12}}>
-        <span style={{fontSize:18}}>⏰</span>
-        <div>
-          <div style={{fontSize:12,color:col,fontWeight:700}}>Predictions lock at tournament kickoff</div>
-          <div style={{fontSize:18,fontWeight:900,fontFamily:"monospace",color:col}}>{parts}</div>
-        </div>
-        <div style={{marginLeft:"auto",fontSize:11,color:T.textDim}}>Jun 11 · 3PM ET</div>
-      </div>
-    );
-  };
+  // Countdown to tournament start — uses Countdown component directly
 
   const fields=[
     {key:"winner",label:"🏆 Tournament Winner",pts:20,color:"#FFD700"},
@@ -1646,7 +1641,8 @@ function PredictionsTab({player,data,update,toast_,stageInfo}) {
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>🔮 Your Predictions</h2>
-      {locked&&<div style={{background:"#FFF3E0",border:"1px solid #FFB74D",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13}}>⚠️ Tournament started. Changes cost <strong>{stageInfo.pts} pts</strong> ({stageInfo.stage}).</div>}
+      {!locked&&<Countdown etDate="2026-06-11" etTime="15:00" label="Predictions lock at tournament kickoff"/>}
+      {locked&&<div style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#fca5a5"}}>⚠️ Tournament started. Changes cost <strong>{stageInfo.pts} pts</strong> ({stageInfo.stage}).</div>}
       <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
         {fields.map(f=>{
           const actualKey=`_${f.key}`;
@@ -2089,7 +2085,7 @@ function RulesTab() {
 function AdminResults({data,update,toast_}) {
   const [filter,setFilter]=useState("All");
   const [form,setForm]=useState({});
-  const [tForm,setTForm]=useState({_winner:data.matchActuals._winner||"",_runnerUp:data.matchActuals._runnerUp||"",_thirdPlace:data.matchActuals._thirdPlace||"",_goldenBoot:data.matchActuals._goldenBoot||"",_goldenBall:data.matchActuals._goldenBall||"",_goldenGlove:data.matchActuals._goldenGlove||""});
+  const [tForm,setTForm]=useState({_winner:data?.matchActuals?._winner||"",_runnerUp:data?.matchActuals?._runnerUp||"",_thirdPlace:data?.matchActuals?._thirdPlace||"",_goldenBoot:data?.matchActuals?._goldenBoot||"",_goldenBall:data?.matchActuals?._goldenBall||"",_goldenGlove:data?.matchActuals?._goldenGlove||""});
   const filtered=filter==="All"?MATCHES:MATCHES.filter(m=>m.stage===filter);
   const [syncing,setSyncing]=useState(false);
   const [syncLog,setSyncLog]=useState(null);
@@ -2362,24 +2358,7 @@ function PlayerQualifiers({player,data,update,toast_}) {
     });
   }
 
-  // Countdown to tournament start (for qualifier lock)
-  const QualCountdown = () => {
-    const secs = useCountdown("2026-06-11","15:00");
-    if(secs<=0) return null;
-    const d=Math.floor(secs/86400),h=Math.floor((secs%86400)/3600),m=Math.floor((secs%3600)/60),s2=secs%60;
-    const parts=d>0?`${d}d ${h}h ${String(m).padStart(2,"0")}m`:`${h}h ${String(m).padStart(2,"0")}m ${String(s2).padStart(2,"0")}s`;
-    const col=secs<86400?"#ef4444":secs<7*86400?"#f97316":T.gold;
-    return (
-      <div style={{display:"flex",alignItems:"center",gap:8,background:`rgba(240,192,64,0.08)`,border:`1px solid rgba(240,192,64,0.2)`,borderRadius:10,padding:"10px 14px",marginBottom:12}}>
-        <span style={{fontSize:18}}>⏰</span>
-        <div>
-          <div style={{fontSize:12,color:col,fontWeight:700}}>Qualifier picks lock at tournament kickoff</div>
-          <div style={{fontSize:18,fontWeight:900,fontFamily:"monospace",color:col}}>{parts}</div>
-        </div>
-        <div style={{marginLeft:"auto",fontSize:11,color:T.textDim}}>Jun 11 · 3PM ET</div>
-      </div>
-    );
-  };
+  // Countdown for qualifier lock — uses Countdown component directly
 
   // Count how many picks made and points earned so far
   const totalPicks = Object.keys(GROUPS).reduce((sum,grp)=>{
@@ -2403,7 +2382,7 @@ function PlayerQualifiers({player,data,update,toast_}) {
         ))}
       </div>
 
-      {!tournamentStarted && <QualCountdown/>}
+      {!tournamentStarted && <Countdown etDate="2026-06-11" etTime="15:00" label="Qualifier picks lock at tournament kickoff"/>}
       {tournamentStarted && qualPenalty.pts>0 && (
         <div style={{background:"rgba(249,115,22,0.1)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#fdba74"}}>
           ⚠️ Tournament started — qualifier changes now cost <strong>{qualPenalty.pts} pts</strong> ({qualPenalty.label}).
