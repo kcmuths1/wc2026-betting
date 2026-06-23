@@ -661,13 +661,19 @@ export default function App() {
   useEffect(()=>{ localStorage.setItem("wc2026_player", player); },[player]);
   useEffect(()=>{ localStorage.setItem("wc2026_isAdmin", isAdmin); },[isAdmin]);
 
+  // Migrate old Firebase data to ensure all new fields exist
+  const migrateData = d => {
+    if(!d) return initData();
+    const init = initData();
+    // Add any missing fields from initData without overwriting existing data
+    Object.keys(init).forEach(k => { if(d[k]===undefined) d[k]=init[k]; });
+    return d;
+  };
+
   useEffect(()=>{
-    loadData().then(d=>{ setData(d||initData()); setLoading(false); });
+    loadData().then(d=>{ setData(migrateData(d)); setLoading(false); });
     const unsub = subscribeToData(remote => {
-      setData(prev => {
-        // Only update from remote if we're not mid-edit (saves take priority)
-        return remote || prev;
-      });
+      setData(prev => migrateData(remote) || prev);
     });
     return () => unsub();
   },[]);
