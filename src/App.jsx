@@ -220,6 +220,21 @@ const STAGE_COLORS = {
 };
 const POINTS = { winner:20,runnerUp:12,thirdPlace:8,goldenBoot:15,goldenBall:15,goldenGlove:12,exactScore:8,correctResult:3,groupQualifier:2 };
 
+// ─── STAGE-BASED MATCH POINTS ────────────────────────────────────────────────
+// Knockout rounds worth more — excitement increases as tournament progresses
+const STAGE_POINTS = {
+  "Group Stage":  { correct:3,  exact:8  },
+  "Round of 32":  { correct:5,  exact:10 },
+  "Round of 16":  { correct:7,  exact:13 },
+  "Quarterfinal": { correct:10, exact:18 },
+  "Semifinal":    { correct:13, exact:22 },
+  "Third-Place":  { correct:18, exact:30 },
+  "Final":        { correct:18, exact:30 },
+};
+function getStagePts(stage) {
+  return STAGE_POINTS[stage] || STAGE_POINTS["Group Stage"];
+}
+
 // ─── UPSET BONUS SYSTEM ───────────────────────────────────────────────────────
 const UPSET_TIERS = [
   { maxGap:5,   bonus:0,  label:"Even",       color:"#475569" },
@@ -406,10 +421,11 @@ const MATCHES = [
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const parseScore = s => { if(!s||!s.includes("-"))return null; const[a,b]=s.split("-"); const h=parseInt(a),aw=parseInt(b); return(isNaN(h)||isNaN(aw))?null:{h,a:aw}; };
 const getResult = s => !s?null:s.h>s.a?"H":s.h<s.a?"A":"D";
-const calcMatchPts = (actual, pred, rankHome, rankAway) => {
+const calcMatchPts = (actual, pred, rankHome, rankAway, stage) => {
   const a=parseScore(actual), p=parseScore(pred);
   if(!a||!p) return 0;
-  const basePts = a.h===p.h&&a.a===p.a ? POINTS.exactScore : getResult(a)===getResult(p) ? POINTS.correctResult : 0;
+  const sp = getStagePts(stage);
+  const basePts = a.h===p.h&&a.a===p.a ? sp.exact : getResult(a)===getResult(p) ? sp.correct : 0;
   if(basePts===0) return 0;
   const upsetBonus = getUpsetBonus(rankHome, rankAway, actual);
   return basePts + upsetBonus;
@@ -610,7 +626,7 @@ function calcScores(data) {
       const key=`${p}_${m.id}`, predicted=data.matchPredictions[key], actual=data.matchActuals[m.id]?.score;
       const rankings = data.teamRankings||{};
       const { home, away } = getMatchTeams(m, data);
-      if(actual&&predicted){ const pts=calcMatchPts(actual,predicted,rankings[home],rankings[away]); matchPts+=pts; if(pts>=POINTS.exactScore)exactCount++; else if(pts===POINTS.correctResult)resultCount++; }
+      if(actual&&predicted){ const pts=calcMatchPts(actual,predicted,rankings[home],rankings[away],m.stage); matchPts+=pts; if(pts>=POINTS.exactScore)exactCount++; else if(pts===POINTS.correctResult)resultCount++; }
     });
     Object.keys(GROUPS).forEach(grp => { for(let s=0;s<2;s++){ const q=data.groupQualifiers[`${p}_${grp}_${s}`]; if(q?.qualified===true)qualPts+=POINTS.groupQualifier; }});
     const ded=data.deductions[p]||0;
@@ -1158,7 +1174,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
         <div style={{background:T.bgCard,border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:16,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,.25)"}}>
           <div style={S.blockTitle}>🎯 Can You Still Win?</div>
           {ranked.map(([name,s],i)=>{
-            const maxPerMatch = POINTS.exactScore;
+            const maxPerMatch = getStagePts(m.stage).exact;
             const maxRemaining = remaining * maxPerMatch;
             const canCatch = name!==player && (s.total - (myScore.total)) <= maxRemaining;
             const isMe = name===player;
@@ -1175,7 +1191,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
               </div>
             );
           })}
-          <div style={{fontSize:11,color:"#64748b",marginTop:8}}>Max pts still available from match predictions: {remaining * POINTS.exactScore}</div>
+          <div style={{fontSize:11,color:"#64748b",marginTop:8}}>Max pts still available from match predictions: varies by stage</div>
         </div>
       )}
 
@@ -1310,7 +1326,7 @@ function Dashboard({ranked,scores,player,data,isAdmin}) {
       if(data.matchActuals._goldenGlove&&pred0.goldenGlove===data.matchActuals._goldenGlove)cum+=POINTS.goldenGlove;
       playedMatches.slice(0,idx+1).forEach(mm=>{
         const key=`${name}_${mm.id}`,pred=data.matchPredictions[key],actual=data.matchActuals[mm.id]?.score;
-        if(actual&&pred)cum+=calcMatchPts(actual,pred);
+        if(actual&&pred)cum+=calcMatchPts(actual,pred,null,null,m.stage);
       });
       Object.keys(GROUPS).forEach(grp=>{ for(let s=0;s<2;s++){const q=data.groupQualifiers[`${name}_${grp}_${s}`];if(q?.qualified===true)cum+=POINTS.groupQualifier;}});
       cum-=(data.deductions[name]||0);
@@ -1434,8 +1450,8 @@ function H2HTab({ranked,scores,data,h2hA,setH2hA,h2hB,setH2hB}) {
     const predAScore=data.matchPredictions[`${h2hA}_${m.id}`];
     const predBScore=data.matchPredictions[`${h2hB}_${m.id}`];
     const {home,away}=getMatchTeams(m,data);
-    const ptsA=actual&&predAScore?calcMatchPts(actual,predAScore,rankings[home],rankings[away]):0;
-    const ptsB=actual&&predBScore?calcMatchPts(actual,predBScore,rankings[home],rankings[away]):0;
+    const ptsA=actual&&predAScore?calcMatchPts(actual,predAScore,rankings[home],rankings[away],m.stage):0;
+    const ptsB=actual&&predBScore?calcMatchPts(actual,predBScore,rankings[home],rankings[away],m.stage):0;
     return {m,actual,predAScore,predBScore,ptsA,ptsB};
   });
   const matchWinsA=matchComparison.filter(r=>r.ptsA>r.ptsB).length;
@@ -1670,12 +1686,12 @@ function MatchesTab({player,data,update,toast_,matchFilter,setMatchFilter,player
   const totalPts=MATCHES.reduce((sum,m)=>{
     const actual=data.matchActuals[m.id]?.score, pred=data.matchPredictions[`${player}_${m.id}`];
     const {home,away}=getMatchTeams(m,data); const r=data.teamRankings||{};
-    return sum+(actual&&pred?calcMatchPts(actual,pred,r[home],r[away]):0);
+    return sum+(actual&&pred?calcMatchPts(actual,pred,r[home],r[away],m.stage):0);
   },0);
   const exactCount=MATCHES.filter(m=>{
     const a=data.matchActuals[m.id]?.score,p=data.matchPredictions[`${player}_${m.id}`];
     const {home,away}=getMatchTeams(m,data); const r=data.teamRankings||{};
-    return a&&p&&calcMatchPts(a,p,r[home],r[away])>=POINTS.exactScore;
+    return a&&p&&calcMatchPts(a,p,r[home],r[away],m.stage)>=getStagePts(m.stage).exact;
   }).length;
 
   return (
@@ -1709,7 +1725,7 @@ function MatchCard({m, player, data, setPred, tz}) {
   const { home, away } = getMatchTeams(m, data);
   const rankHome = rankings[home], rankAway = rankings[away];
   const upsetTier = rankHome && rankAway ? getUpsetTier(rankHome, rankAway) : null;
-  const pts      = actual&&saved ? calcMatchPts(actual, saved, rankHome, rankAway) : null;
+  const pts      = actual&&saved ? calcMatchPts(actual, saved, rankHome, rankAway, m.stage) : null;
 
   const [localVal, setLocalVal] = useState(saved);
   useEffect(()=>{ setLocalVal(saved); }, [saved]);
@@ -1758,6 +1774,23 @@ function MatchCard({m, player, data, setPred, tz}) {
           )}
         </div>
       </div>
+
+      {/* Stage points badge — shows available points for this stage */}
+      {(()=>{
+        const sp=getStagePts(m.stage);
+        const isKO=m.stage!=="Group Stage";
+        if(!isKO)return null;
+        const stageColor=STAGE_COLORS[m.stage]||"#333";
+        return(
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,background:`${stageColor}20`,border:`1px solid ${stageColor}50`,borderRadius:6,padding:"4px 10px"}}>
+            <span style={{fontSize:10,color:stageColor,fontWeight:700}}>🏆 {m.stage}:</span>
+            <span style={{fontSize:10,color:stageColor,fontWeight:900}}>+{sp.correct} correct</span>
+            <span style={{fontSize:10,color:T.textMute}}>·</span>
+            <span style={{fontSize:10,color:stageColor,fontWeight:900}}>+{sp.exact} exact</span>
+            <span style={{fontSize:10,color:T.textMute,marginLeft:"auto"}}>pts available</span>
+          </div>
+        );
+      })()}
 
       {/* Upset bonus indicator */}
       {upsetTier && upsetTier.bonus > 0 && (
@@ -1942,6 +1975,23 @@ function RulesTab() {
         </div>
       ))}
     </>},
+    {icon:"🏆",title:"Knockout Stage Bonus Points",color:"#01579B",body:<>
+      <p style={S.rp}>Match predictions are worth more as the tournament progresses — knockout rounds carry higher stakes!</p>
+      <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
+        {Object.entries(STAGE_POINTS).map(([stage,pts])=>(
+          <div key={stage} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"rgba(255,255,255,0.03)",borderRadius:8,border:`1px solid ${STAGE_COLORS[stage]||"#333"}30`}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:STAGE_COLORS[stage]||"#333",flexShrink:0}}/>
+            <span style={{flex:1,fontWeight:700,color:T.text,fontSize:13}}>{stage}</span>
+            <span style={{color:"#60a5fa",fontWeight:700,fontSize:12}}>✅ {pts.correct} pts</span>
+            <span style={{color:T.textMute,fontSize:11}}>·</span>
+            <span style={{color:T.gold,fontWeight:700,fontSize:12}}>🎯 {pts.exact} pts</span>
+          </div>
+        ))}
+      </div>
+      <div style={{background:"rgba(1,87,155,0.1)",border:"1px solid rgba(1,87,155,0.3)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#90CAF9"}}>
+        💡 Upset bonuses stack on top — a correct Final prediction for a major underdog could be worth <strong>18 + 50 = 68 pts!</strong>
+      </div>
+    </>},
     {icon:"⚡",title:"Upset Bonus Points",color:"#ef4444",body:<>
       <p style={S.rp}>When a <strong style={{color:T.text}}>lower-ranked team wins</strong>, players who correctly predicted that upset earn bonus points on top of the normal match points. Applies to match predictions only — not tournament prizes.</p>
       <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
@@ -1967,7 +2017,7 @@ function RulesTab() {
       ))}
     </>},
     {icon:"📊",title:"Max Points Reference",color:"#006064",body:<>
-      {[["🏆 Winner","1×20","20"],["🥈 Runner-Up","1×12","12"],["🥉 3rd Place","1×8","8"],["⚽ Golden Boot","1×15","15"],["🎖 Golden Ball","1×15","15"],["🧤 Golden Glove","1×12","12"],["🎯 Exact Scores","104×8","832"],["✅ Correct Results","104×3","312"],["👥 Qualifiers","24×2","48"]].map(([c,v,m])=>(
+      {[["🏆 Winner","1×20","20"],["🥈 Runner-Up","1×12","12"],["🥉 3rd Place","1×8","8"],["⚽ Golden Boot","1×15","15"],["🎖 Golden Ball","1×15","15"],["🧤 Golden Glove","1×12","12"],["🎯 Exact Scores","Group 8/KO up to 30","varies"],["✅ Correct Results","Group 3/KO up to 18","varies"],["👥 Qualifiers","24×2","48"]].map(([c,v,m])=>(
         <div key={c} style={{display:"flex",padding:"6px 10px",background:"rgba(255,255,255,0.04)",borderRadius:8,marginBottom:4,fontSize:13,color:"#cbd5e1"}}>
           <span style={{flex:1,fontWeight:600}}>{c}</span><span style={{color:"#64748b",minWidth:60}}>{v}</span><span style={{fontWeight:800,color:"#22c55e",minWidth:50,textAlign:"right"}}>{m} pts</span>
         </div>
