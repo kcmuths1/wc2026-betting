@@ -1198,7 +1198,7 @@ function HomeTab({ranked,scores,player,upcoming,recentResults,data,isAdmin,stage
         <div style={{background:T.bgCard,border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:16,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,.25)"}}>
           <div style={S.blockTitle}>🎯 Can You Still Win?</div>
           {ranked.map(([name,s],i)=>{
-            const maxPerMatch = getStagePts(m.stage).exact;
+            const maxPerMatch = getStagePts(stageInfo?.stage||"Group Stage").exact;
             const maxRemaining = remaining * maxPerMatch;
             const canCatch = name!==player && (s.total - (myScore.total)) <= maxRemaining;
             const isMe = name===player;
