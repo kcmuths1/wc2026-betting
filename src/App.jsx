@@ -684,6 +684,12 @@ export default function App() {
 
   if(loading) return <Splash/>;
 
+  // Show login screen before any expensive calculations
+  if(!player&&!isAdmin) return <Login playerInput={playerInput} setPlayerInput={setPlayerInput} adminInput={adminInput} setAdminInput={setAdminInput} setPlayer={setPlayer} setIsAdmin={setIsAdmin} toast_={toast_} toast={toast} data={data} update={update}/>;
+
+  // Guard against null/incomplete data
+  if(!data?.matchPredictions || !data?.predictions) return <Splash/>;
+
   const scores = calcScores(data);
   const ranked = Object.entries(scores)
     .filter(([p]) => data.predictions[p] || Object.keys(data.matchPredictions).some(k=>k.startsWith(p+"_")))
@@ -694,8 +700,6 @@ export default function App() {
   const upcoming = MATCHES.filter(m=>!isLocked(m)).slice(0,5);
   // Recent results (last 5 with actual scores)
   const recentResults = [...MATCHES].reverse().filter(m=>data.matchActuals[m.id]?.score).slice(0,5);
-
-  if(!player&&!isAdmin) return <Login playerInput={playerInput} setPlayerInput={setPlayerInput} adminInput={adminInput} setAdminInput={setAdminInput} setPlayer={setPlayer} setIsAdmin={setIsAdmin} toast_={toast_} toast={toast} data={data} update={update}/>;
 
   const tournamentStarted = Date.now() >= new Date("2026-06-11T19:00:00Z").getTime();
   const groupStageOver   = Date.now() >= new Date("2026-06-28T04:00:00Z").getTime(); // after last group matches
