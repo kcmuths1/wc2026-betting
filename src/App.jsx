@@ -1084,7 +1084,7 @@ function Nav({tabs,tab,setTab,player,isAdmin,onLogout,saving,stageInfo}) {
             cursor:"pointer",textAlign:"left",transition:"all .12s",borderRadius:"0 8px 8px 0",margin:"1px 0",
           }}>
             <span style={{fontSize:16,flexShrink:0}}>{t.label}</span>
-            <span style={{fontSize:12,fontWeight:tab===t.id?800:400,color:tab===t.id?"#f0c040":"#475569",whiteSpace:"nowrap",fontWeight:tab===t.id?700:500}}>{t.tip}</span>
+            <span style={{fontSize:12,fontWeight:tab===t.id?800:500,color:tab===t.id?"#f0c040":"#475569",whiteSpace:"nowrap"}}>{t.tip}</span>
           </button>
         ))}
       </div>
@@ -2028,7 +2028,7 @@ function RulesTab() {
           <span style={{flex:1,fontWeight:600}}>{c}</span><span style={{color:"#64748b",minWidth:60}}>{v}</span><span style={{fontWeight:800,color:"#22c55e",minWidth:50,textAlign:"right"}}>{m} pts</span>
         </div>
       ))}
-      <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:800,fontSize:15,color:"#f1f5f9",textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 962 pts</div>
+      <div style={{background:"#1A5C2E",color:"#FFD700",borderRadius:8,padding:"10px 12px",fontWeight:800,fontSize:15,textAlign:"center",marginTop:8}}>🏆 Theoretical Max: 962 pts</div>
     </>},
     {icon:"🌍",title:"Timezone Setup",color:"#60a5fa",body:<>
       <p style={S.rp}>All match times are stored in <strong>Eastern Time (ET)</strong> — the host country time zone. You can set your own timezone so all dates and times display correctly for your location.</p>
