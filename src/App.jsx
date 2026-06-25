@@ -458,6 +458,7 @@ const TIMEZONES = [
   { id:"GST",  label:"GST — Gulf Standard Time (UAE)",   offset:8,    abbr:"GST"  },
   { id:"IST",  label:"IST — India Standard Time",        offset:9.5,  abbr:"IST"  },
   { id:"SGT",  label:"SGT — Singapore / Malaysia Time",  offset:12,   abbr:"SGT"  },
+  { id:"JST",  label:"JST — Japan Standard Time",        offset:13,   abbr:"JST"  },
   { id:"AEDT", label:"AEDT — Australian Eastern Summer", offset:15,   abbr:"AEDT" },
 ];
 
