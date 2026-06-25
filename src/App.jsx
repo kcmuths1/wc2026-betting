@@ -740,6 +740,7 @@ export default function App() {
     ...(tournamentStarted?[{id:"picks",label:"👁",tip:"All Picks"}]:[]),
     {id:"admin_results",label:"⚙️",tip:"Results"},
     {id:"admin_qualifiers",label:"✅",tip:"Qualifiers"},
+    {id:"admin_bracket",label:"🏟️",tip:"Bracket"},
     {id:"admin_deductions",label:"📉",tip:"Deductions"},
     {id:"admin_settings",label:"🔧",tip:"Settings"},
     {id:"h2h",label:"⚔️",tip:"Head-to-Head"},
@@ -797,6 +798,7 @@ export default function App() {
             {tab==="admin_results" && isAdmin && <AdminResults data={data} update={update} toast_={toast_}/>}
             {tab==="admin_qualifiers" && isAdmin && <AdminQualifiers data={data} update={update} toast_={toast_}/>}
             {tab==="admin_deductions" && isAdmin && <AdminDeductions data={data} update={update} toast_={toast_} ranked={ranked}/>}
+            {tab==="admin_bracket"   && isAdmin && <AdminBracket data={data} update={update} toast_={toast_}/>}
             {tab==="admin_settings" && isAdmin && <AdminSettings data={data} update={update} toast_={toast_}/>}
           </div>
         </div>
@@ -2527,6 +2529,209 @@ function AdminDeductions({data,update,toast_,ranked}) {
             <span style={{color:d.pts===0?"#1B5E20":"#ef5350",fontWeight:700}}>{d.label}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ADMIN: BRACKET ───────────────────────────────────────────────────────────
+function AdminBracket({data,update,toast_}) {
+  const R32_SLOTS=[
+    {id:73,home:"Runner-up A",away:"Runner-up B"},
+    {id:74,home:"Winner E",away:"Best 3rd"},
+    {id:75,home:"Winner F",away:"Runner-up C"},
+    {id:76,home:"Winner C",away:"Runner-up F"},
+    {id:77,home:"Winner I",away:"Best 3rd"},
+    {id:78,home:"Runner-up E",away:"Runner-up I"},
+    {id:79,home:"Winner A",away:"Best 3rd"},
+    {id:80,home:"Winner L",away:"Best 3rd"},
+    {id:81,home:"Winner D",away:"Best 3rd"},
+    {id:82,home:"Winner G",away:"Best 3rd"},
+    {id:83,home:"Runner-up K",away:"Runner-up L"},
+    {id:84,home:"Winner H",away:"Runner-up J"},
+    {id:85,home:"Winner B",away:"Best 3rd"},
+    {id:86,home:"Winner J",away:"Runner-up H"},
+    {id:87,home:"Winner K",away:"Best 3rd"},
+    {id:88,home:"Runner-up D",away:"Runner-up G"},
+  ];
+
+  const [form,setForm]=useState(()=>{
+    const f={};
+    R32_SLOTS.forEach(({id})=>{
+      f[`${id}_home`]=data.knockoutTeams?.[id]?.home||"";
+      f[`${id}_away`]=data.knockoutTeams?.[id]?.away||"";
+    });
+    return f;
+  });
+
+  function calcStandings(){
+    const st={};
+    Object.keys(GROUPS).forEach(g=>{
+      st[g]={};
+      GROUPS[g].forEach(t=>{st[g][t]={pts:0,gd:0,gf:0,ga:0,pl:0};});
+    });
+    MATCHES.filter(mm=>mm.id<=72&&mm.grp).forEach(mm=>{
+      const res=data.matchActuals[mm.id];
+      if(!res?.score)return;
+      const [hg,ag]=res.score.split("-").map(Number);
+      if(isNaN(hg)||isNaN(ag))return;
+      const g=mm.grp;
+      if(!st[g]?.[mm.home])st[g][mm.home]={pts:0,gd:0,gf:0,ga:0,pl:0};
+      if(!st[g]?.[mm.away])st[g][mm.away]={pts:0,gd:0,gf:0,ga:0,pl:0};
+      st[g][mm.home].pl++;st[g][mm.away].pl++;
+      st[g][mm.home].gf+=hg;st[g][mm.away].gf+=ag;
+      st[g][mm.home].ga+=ag;st[g][mm.away].ga+=hg;
+      st[g][mm.home].gd+=(hg-ag);st[g][mm.away].gd+=(ag-hg);
+      if(hg>ag)st[g][mm.home].pts+=3;
+      else if(ag>hg)st[g][mm.away].pts+=3;
+      else{st[g][mm.home].pts+=1;st[g][mm.away].pts+=1;}
+    });
+    return st;
+  }
+
+  function getTop2(st,g){
+    const sorted=Object.entries(st[g]||{}).sort((a,b)=>b[1].pts-a[1].pts||b[1].gd-a[1].gd||b[1].gf-a[1].gf);
+    return[sorted[0]?.[0]||"",sorted[1]?.[0]||""];
+  }
+
+  function getBest8Thirds(st,rankings){
+    const thirds=[];
+    Object.keys(GROUPS).forEach(g=>{
+      const sorted=Object.entries(st[g]||{}).sort((a,b)=>b[1].pts-a[1].pts||b[1].gd-a[1].gd||b[1].gf-a[1].gf);
+      const third=sorted[2];
+      if(third&&third[1].pl>=3){
+        thirds.push({team:third[0],group:g,pts:third[1].pts,gd:third[1].gd,gf:third[1].gf,ga:third[1].ga,rank:rankings?.[third[0]]||999});
+      }
+    });
+    thirds.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.ga-b.ga||a.rank-b.rank);
+    return thirds.slice(0,8);
+  }
+
+  function autoPopulate(){
+    const st=calcStandings();
+    const rankings=data.teamRankings||{};
+    const allDone=Object.keys(GROUPS).every(g=>{
+      const total=Object.values(st[g]||{}).reduce((s,t)=>s+t.pl,0)/2;
+      return total>=6;
+    });
+    if(!allDone) toast_("⚠️ Not all groups finished — results may be incomplete","error");
+    const best8=getBest8Thirds(st,rankings).map(t=>t.team);
+    let b8i=0;
+    const newForm={...form};
+    R32_SLOTS.forEach(({id,home:hp,away:ap})=>{
+      const resolve=p=>{
+        if(p.startsWith("Winner ")){const g=p.replace("Winner ","");return getTop2(st,g)[0]||p;}
+        if(p.startsWith("Runner-up ")){const g=p.replace("Runner-up ","");return getTop2(st,g)[1]||p;}
+        if(p.startsWith("Best 3rd"))return best8[b8i++]||p;
+        return p;
+      };
+      newForm[`${id}_home`]=resolve(hp);
+      newForm[`${id}_away`]=resolve(ap);
+    });
+    setForm(newForm);
+    toast_("✅ Bracket auto-populated! Review and click Save.");
+  }
+
+  function saveAll(){
+    update(d=>{
+      R32_SLOTS.forEach(({id})=>{
+        const h=form[`${id}_home`]?.trim();
+        const a=form[`${id}_away`]?.trim();
+        if(h&&a)d.knockoutTeams[id]={home:h,away:a};
+      });
+      return d;
+    });
+    toast_("✅ Bracket saved — fixtures updated for all players");
+  }
+
+  const st=calcStandings();
+  const best8=getBest8Thirds(st,data.teamRankings||{});
+  const filled=R32_SLOTS.filter(({id})=>{
+    const h=form[`${id}_home`];
+    return h&&!h.includes("Winner")&&!h.includes("Runner-up")&&!h.includes("Best 3rd");
+  }).length;
+
+  return (
+    <div style={S.sec}>
+      <h2 style={S.h2}>🏟️ Knockout Bracket</h2>
+
+      {/* Auto-populate card */}
+      <div style={{...S.card,border:"1px solid rgba(240,192,64,0.3)",background:"rgba(240,192,64,0.05)"}}>
+        <div style={{...S.blockTitle,color:T.gold}}>🤖 Auto-Populate from Group Results</div>
+        <p style={{fontSize:13,color:T.textDim,marginBottom:10,lineHeight:1.6}}>
+          Fills all 16 R32 slots using current group standings and FIFA tiebreaker rules for best 3rd-placed teams.
+          Run <strong style={{color:T.text}}>after all 12 groups have finished</strong> (Jun 27).
+        </p>
+        <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+          <span style={{background:"rgba(34,197,94,0.1)",borderRadius:8,padding:"5px 10px",fontSize:12,color:T.green,fontWeight:700}}>
+            ✅ {filled}/16 slots set
+          </span>
+          <span style={{background:"rgba(255,255,255,0.05)",borderRadius:8,padding:"5px 10px",fontSize:12,color:T.textDim}}>
+            🥉 {best8.length} third-placed teams ranked
+          </span>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <button style={{...S.btn,flex:1,background:"linear-gradient(135deg,#f0c040,#f9a825)",color:"#111",fontWeight:800}}
+            onClick={autoPopulate}>🤖 Auto-Populate</button>
+          <button style={{...S.btn,flex:1}} onClick={saveAll}>💾 Save All to Fixtures</button>
+        </div>
+      </div>
+
+      {/* Best 8 thirds */}
+      {best8.length>0&&(
+        <div style={S.card}>
+          <div style={S.blockTitle}>🥉 Best 8 Third-Placed Teams (FIFA Rules)</div>
+          <p style={{fontSize:11,color:T.textMute,marginBottom:10}}>Ranked by: Points → GD → GF → Goals Against → FIFA Ranking</p>
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>
+            {best8.map((t,i)=>(
+              <div key={t.team} style={{display:"flex",alignItems:"center",gap:8,background:T.bgCard2,borderRadius:8,padding:"8px 12px",border:"1px solid rgba(240,192,64,0.15)"}}>
+                <span style={{fontWeight:900,color:T.gold,minWidth:24,fontSize:14}}>#{i+1}</span>
+                <div style={{flex:1}}>
+                  <span style={{fontWeight:700,color:T.text,fontSize:13}}>{t.team}</span>
+                  <span style={{color:T.textDim,fontSize:11,marginLeft:8}}>Group {t.group}</span>
+                </div>
+                <div style={{display:"flex",gap:10,fontSize:11,color:T.textDim}}>
+                  <span style={{color:T.gold,fontWeight:700}}>{t.pts}pts</span>
+                  <span>GD{t.gd>=0?"+":""}{t.gd}</span>
+                  <span>GF{t.gf}</span>
+                  <span>GA{t.ga}</span>
+                  <span>Rank#{t.rank}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Manual R32 entry */}
+      <div style={S.card}>
+        <div style={S.blockTitle}>✏️ Manual R32 Slots</div>
+        <p style={{fontSize:12,color:T.textDim,marginBottom:10}}>Edit any slot manually. "Save All" pushes to all player fixtures.</p>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {R32_SLOTS.map(({id,home:hp,away:ap})=>{
+            const saved=data.knockoutTeams?.[id];
+            const isSet=saved?.home&&!saved.home.includes("Winner")&&!saved.home.includes("Runner-up")&&!saved.home.includes("Best 3rd");
+            return (
+              <div key={id} style={{background:T.bgCard2,borderRadius:10,padding:"10px 12px",border:`1px solid ${isSet?"rgba(34,197,94,0.2)":T.border}`}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                  <div style={{background:STAGE_COLORS["Round of 32"],color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700}}>#{id}</div>
+                  <span style={{fontSize:10,color:T.textMute}}>{hp} vs {ap}</span>
+                  {isSet&&<span style={{marginLeft:"auto",fontSize:10,color:T.green}}>✅ Set</span>}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 30px 1fr",gap:6,alignItems:"center"}}>
+                  <input style={{...S.inp,fontSize:12,padding:"6px 10px"}} placeholder={hp}
+                    value={form[`${id}_home`]}
+                    onChange={e=>setForm(f=>({...f,[`${id}_home`]:e.target.value}))}/>
+                  <span style={{color:T.textMute,textAlign:"center",fontSize:11,fontWeight:700}}>vs</span>
+                  <input style={{...S.inp,fontSize:12,padding:"6px 10px"}} placeholder={ap}
+                    value={form[`${id}_away`]}
+                    onChange={e=>setForm(f=>({...f,[`${id}_away`]:e.target.value}))}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <button style={{...S.btn,marginTop:12}} onClick={saveAll}>💾 Save All to Fixtures</button>
       </div>
     </div>
   );
