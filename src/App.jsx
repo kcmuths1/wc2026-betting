@@ -2537,34 +2537,87 @@ function AdminDeductions({data,update,toast_,ranked}) {
 
 // ─── ADMIN: BRACKET ───────────────────────────────────────────────────────────
 function AdminBracket({data,update,toast_}) {
-  const R32_SLOTS=[
-    {id:73,home:"Runner-up A",away:"Runner-up B"},
-    {id:74,home:"Winner E",away:"Best 3rd"},
-    {id:75,home:"Winner F",away:"Runner-up C"},
-    {id:76,home:"Winner C",away:"Runner-up F"},
-    {id:77,home:"Winner I",away:"Best 3rd"},
-    {id:78,home:"Runner-up E",away:"Runner-up I"},
-    {id:79,home:"Winner A",away:"Best 3rd"},
-    {id:80,home:"Winner L",away:"Best 3rd"},
-    {id:81,home:"Winner D",away:"Best 3rd"},
-    {id:82,home:"Winner G",away:"Best 3rd"},
-    {id:83,home:"Runner-up K",away:"Runner-up L"},
-    {id:84,home:"Winner H",away:"Runner-up J"},
-    {id:85,home:"Winner B",away:"Best 3rd"},
-    {id:86,home:"Winner J",away:"Runner-up H"},
-    {id:87,home:"Winner K",away:"Best 3rd"},
-    {id:88,home:"Runner-up D",away:"Runner-up G"},
+
+  // All knockout rounds — matches 73-104
+  const ALL_ROUNDS = [
+    {
+      label:"Round of 32", stage:"Round of 32", color:STAGE_COLORS["Round of 32"],
+      slots:[
+        {id:73,home:"Runner-up A",   away:"Runner-up B"},
+        {id:74,home:"Winner E",      away:"Best 3rd"},
+        {id:75,home:"Winner F",      away:"Runner-up C"},
+        {id:76,home:"Winner C",      away:"Runner-up F"},
+        {id:77,home:"Winner I",      away:"Best 3rd"},
+        {id:78,home:"Runner-up E",   away:"Runner-up I"},
+        {id:79,home:"Winner A",      away:"Best 3rd"},
+        {id:80,home:"Winner L",      away:"Best 3rd"},
+        {id:81,home:"Winner D",      away:"Best 3rd"},
+        {id:82,home:"Winner G",      away:"Best 3rd"},
+        {id:83,home:"Runner-up K",   away:"Runner-up L"},
+        {id:84,home:"Winner H",      away:"Runner-up J"},
+        {id:85,home:"Winner B",      away:"Best 3rd"},
+        {id:86,home:"Winner J",      away:"Runner-up H"},
+        {id:87,home:"Winner K",      away:"Best 3rd"},
+        {id:88,home:"Runner-up D",   away:"Runner-up G"},
+      ]
+    },
+    {
+      label:"Round of 16", stage:"Round of 16", color:STAGE_COLORS["Round of 16"],
+      slots:[
+        {id:89,home:"W Match 73",away:"W Match 75"},
+        {id:90,home:"W Match 74",away:"W Match 77"},
+        {id:91,home:"W Match 76",away:"W Match 78"},
+        {id:92,home:"W Match 79",away:"W Match 80"},
+        {id:93,home:"W Match 81",away:"W Match 82"},
+        {id:94,home:"W Match 83",away:"W Match 84"},
+        {id:95,home:"W Match 85",away:"W Match 87"},
+        {id:96,home:"W Match 86",away:"W Match 88"},
+      ]
+    },
+    {
+      label:"Quarterfinals", stage:"Quarterfinal", color:STAGE_COLORS["Quarterfinal"],
+      slots:[
+        {id:97, home:"W Match 89",away:"W Match 90"},
+        {id:98, home:"W Match 93",away:"W Match 94"},
+        {id:99, home:"W Match 91",away:"W Match 92"},
+        {id:100,home:"W Match 95",away:"W Match 96"},
+      ]
+    },
+    {
+      label:"Semifinals", stage:"Semifinal", color:STAGE_COLORS["Semifinal"],
+      slots:[
+        {id:101,home:"W Match 97", away:"W Match 98"},
+        {id:102,home:"W Match 99", away:"W Match 100"},
+      ]
+    },
+    {
+      label:"3rd Place Final", stage:"Third-Place", color:STAGE_COLORS["Third-Place"],
+      slots:[
+        {id:103,home:"Loser Match 101",away:"Loser Match 102"},
+      ]
+    },
+    {
+      label:"Final", stage:"Final", color:STAGE_COLORS["Final"],
+      slots:[
+        {id:104,home:"W Match 101",away:"W Match 102"},
+      ]
+    },
   ];
+
+  const ALL_SLOTS = ALL_ROUNDS.flatMap(r=>r.slots);
 
   const [form,setForm]=useState(()=>{
     const f={};
-    R32_SLOTS.forEach(({id})=>{
+    ALL_SLOTS.forEach(({id})=>{
       f[`${id}_home`]=data.knockoutTeams?.[id]?.home||"";
       f[`${id}_away`]=data.knockoutTeams?.[id]?.away||"";
     });
     return f;
   });
 
+  const [activeRound,setActiveRound]=useState("Round of 32");
+
+  // ── Calculate group standings ────────────────────────────────────────────────
   function calcStandings(){
     const st={};
     Object.keys(GROUPS).forEach(g=>{
@@ -2608,7 +2661,8 @@ function AdminBracket({data,update,toast_}) {
     return thirds.slice(0,8);
   }
 
-  function autoPopulate(){
+  // ── Auto-populate a round from previous round winners ─────────────────────
+  function autoPopulateR32(){
     const st=calcStandings();
     const rankings=data.teamRankings||{};
     const allDone=Object.keys(GROUPS).every(g=>{
@@ -2619,7 +2673,7 @@ function AdminBracket({data,update,toast_}) {
     const best8=getBest8Thirds(st,rankings).map(t=>t.team);
     let b8i=0;
     const newForm={...form};
-    R32_SLOTS.forEach(({id,home:hp,away:ap})=>{
+    ALL_ROUNDS[0].slots.forEach(({id,home:hp,away:ap})=>{
       const resolve=p=>{
         if(p.startsWith("Winner ")){const g=p.replace("Winner ","");return getTop2(st,g)[0]||p;}
         if(p.startsWith("Runner-up ")){const g=p.replace("Runner-up ","");return getTop2(st,g)[1]||p;}
@@ -2630,96 +2684,144 @@ function AdminBracket({data,update,toast_}) {
       newForm[`${id}_away`]=resolve(ap);
     });
     setForm(newForm);
-    toast_("✅ Bracket auto-populated! Review and click Save.");
+    toast_("✅ R32 auto-populated! Review and Save.");
+  }
+
+  // Auto-populate a round from match results (R16 onwards)
+  function autoPopulateFromResults(round){
+    const newForm={...form};
+    round.slots.forEach(({id,home:hp,away:ap})=>{
+      const resolve=p=>{
+        // "W Match 73" → find winner of match 73
+        const wm=p.match(/^W Match (\d+)$/);
+        const lm=p.match(/^Loser Match (\d+)$/);
+        if(wm){
+          const mid=parseInt(wm[1]);
+          const result=data.matchActuals[mid];
+          const kt=data.knockoutTeams?.[mid];
+          if(result?.winner&&result.winner!=="Draw") return result.winner;
+          if(kt?.home) return `W(${kt.home} vs ${kt.away})`;
+          return p;
+        }
+        if(lm){
+          const mid=parseInt(lm[1]);
+          const result=data.matchActuals[mid];
+          const kt=data.knockoutTeams?.[mid];
+          if(result?.winner&&kt){
+            return result.winner===kt.home?kt.away:kt.home;
+          }
+          return p;
+        }
+        return p;
+      };
+      newForm[`${id}_home`]=resolve(hp);
+      newForm[`${id}_away`]=resolve(ap);
+    });
+    setForm(newForm);
+    toast_(`✅ ${round.label} auto-populated from results!`);
   }
 
   function saveAll(){
     update(d=>{
-      R32_SLOTS.forEach(({id})=>{
+      ALL_SLOTS.forEach(({id})=>{
         const h=form[`${id}_home`]?.trim();
         const a=form[`${id}_away`]?.trim();
         if(h&&a)d.knockoutTeams[id]={home:h,away:a};
       });
       return d;
     });
-    toast_("✅ Bracket saved — fixtures updated for all players");
+    toast_("✅ All knockout fixtures saved for all players");
   }
 
   const st=calcStandings();
   const best8=getBest8Thirds(st,data.teamRankings||{});
-  const filled=R32_SLOTS.filter(({id})=>{
+
+  const isSlotSet=id=>{
     const h=form[`${id}_home`];
-    return h&&!h.includes("Winner")&&!h.includes("Runner-up")&&!h.includes("Best 3rd");
-  }).length;
+    return h&&!h.startsWith("Winner ")&&!h.startsWith("Runner-up ")&&!h.startsWith("W Match ")&&!h.startsWith("Loser ")&&!h.startsWith("Best 3rd");
+  };
+
+  const currentRound=ALL_ROUNDS.find(r=>r.label===activeRound)||ALL_ROUNDS[0];
+  const filledPerRound=ALL_ROUNDS.map(r=>r.slots.filter(({id})=>isSlotSet(id)).length);
 
   return (
     <div style={S.sec}>
       <h2 style={S.h2}>🏟️ Knockout Bracket</h2>
 
-      {/* Auto-populate card */}
-      <div style={{...S.card,border:"1px solid rgba(240,192,64,0.3)",background:"rgba(240,192,64,0.05)"}}>
-        <div style={{...S.blockTitle,color:T.gold}}>🤖 Auto-Populate from Group Results</div>
-        <p style={{fontSize:13,color:T.textDim,marginBottom:10,lineHeight:1.6}}>
-          Fills all 16 R32 slots using current group standings and FIFA tiebreaker rules for best 3rd-placed teams.
-          Run <strong style={{color:T.text}}>after all 12 groups have finished</strong> (Jun 27).
-        </p>
-        <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
-          <span style={{background:"rgba(34,197,94,0.1)",borderRadius:8,padding:"5px 10px",fontSize:12,color:T.green,fontWeight:700}}>
-            ✅ {filled}/16 slots set
-          </span>
-          <span style={{background:"rgba(255,255,255,0.05)",borderRadius:8,padding:"5px 10px",fontSize:12,color:T.textDim}}>
-            🥉 {best8.length} third-placed teams ranked
-          </span>
-        </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button style={{...S.btn,flex:1,background:"linear-gradient(135deg,#f0c040,#f9a825)",color:"#111",fontWeight:800}}
-            onClick={autoPopulate}>🤖 Auto-Populate</button>
-          <button style={{...S.btn,flex:1}} onClick={saveAll}>💾 Save All to Fixtures</button>
-        </div>
+      {/* Round selector */}
+      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+        {ALL_ROUNDS.map((r,i)=>(
+          <button key={r.label}
+            style={{...S.chip,...(activeRound===r.label?S.chipActive:{}),
+              borderColor:activeRound===r.label?r.color:undefined,
+              position:"relative"}}
+            onClick={()=>setActiveRound(r.label)}>
+            {r.label}
+            <span style={{
+              position:"absolute",top:-6,right:-6,
+              background:filledPerRound[i]===r.slots.length?T.green:"#475569",
+              color:"#fff",borderRadius:"50%",width:16,height:16,
+              fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"
+            }}>
+              {filledPerRound[i]}/{r.slots.length}
+            </span>
+          </button>
+        ))}
+        <button style={{...S.btn,width:"auto",padding:"4px 12px",fontSize:12,marginLeft:"auto"}}
+          onClick={saveAll}>💾 Save All</button>
       </div>
 
-      {/* Best 8 thirds */}
-      {best8.length>0&&(
-        <div style={S.card}>
-          <div style={S.blockTitle}>🥉 Best 8 Third-Placed Teams (FIFA Rules)</div>
-          <p style={{fontSize:11,color:T.textMute,marginBottom:10}}>Ranked by: Points → GD → GF → Goals Against → FIFA Ranking</p>
-          <div style={{display:"flex",flexDirection:"column",gap:5}}>
-            {best8.map((t,i)=>(
-              <div key={t.team} style={{display:"flex",alignItems:"center",gap:8,background:T.bgCard2,borderRadius:8,padding:"8px 12px",border:"1px solid rgba(240,192,64,0.15)"}}>
-                <span style={{fontWeight:900,color:T.gold,minWidth:24,fontSize:14}}>#{i+1}</span>
-                <div style={{flex:1}}>
-                  <span style={{fontWeight:700,color:T.text,fontSize:13}}>{t.team}</span>
-                  <span style={{color:T.textDim,fontSize:11,marginLeft:8}}>Group {t.group}</span>
-                </div>
-                <div style={{display:"flex",gap:10,fontSize:11,color:T.textDim}}>
-                  <span style={{color:T.gold,fontWeight:700}}>{t.pts}pts</span>
-                  <span>GD{t.gd>=0?"+":""}{t.gd}</span>
-                  <span>GF{t.gf}</span>
-                  <span>GA{t.ga}</span>
-                  <span>Rank#{t.rank}</span>
+      {/* Auto-populate card */}
+      <div style={{...S.card,border:`1px solid ${currentRound.color}40`,background:`${currentRound.color}08`}}>
+        <div style={{...S.blockTitle,color:currentRound.color}}>
+          🤖 Auto-Populate — {currentRound.label}
+        </div>
+        {currentRound.label==="Round of 32"?(
+          <>
+            <p style={{fontSize:13,color:T.textDim,marginBottom:10,lineHeight:1.6}}>
+              Uses group standings + FIFA 3rd-place tiebreaker rules. Run after all 12 groups finish (Jun 27).
+            </p>
+            {best8.length>0&&(
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:11,color:T.textMute,marginBottom:6}}>
+                  🥉 Best 8 thirds: {best8.map(t=>`${t.team}(${t.group})`).join(" · ")}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )}
+            <button style={{...S.btn,background:`linear-gradient(135deg,${currentRound.color},${currentRound.color}99)`,color:"#fff"}}
+              onClick={autoPopulateR32}>🤖 Auto-Populate R32</button>
+          </>
+        ):(
+          <>
+            <p style={{fontSize:13,color:T.textDim,marginBottom:10,lineHeight:1.6}}>
+              Fills {currentRound.label} slots from {currentRound.label==="Round of 16"?"R32":"previous round"} match winners already in the results.
+              <strong style={{color:T.text}}> Run after each round's results are entered.</strong>
+            </p>
+            <button style={{...S.btn,background:`linear-gradient(135deg,${currentRound.color},${currentRound.color}99)`,color:"#fff"}}
+              onClick={()=>autoPopulateFromResults(currentRound)}>
+              🤖 Auto-Populate {currentRound.label}
+            </button>
+          </>
+        )}
+      </div>
 
-      {/* Manual R32 entry */}
+      {/* Slot entry for current round */}
       <div style={S.card}>
-        <div style={S.blockTitle}>✏️ Manual R32 Slots</div>
-        <p style={{fontSize:12,color:T.textDim,marginBottom:10}}>Edit any slot manually. "Save All" pushes to all player fixtures.</p>
+        <div style={S.blockTitle}>✏️ {currentRound.label} — Manual Entry</div>
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
-          {R32_SLOTS.map(({id,home:hp,away:ap})=>{
-            const saved=data.knockoutTeams?.[id];
-            const isSet=saved?.home&&!saved.home.includes("Winner")&&!saved.home.includes("Runner-up")&&!saved.home.includes("Best 3rd");
-            return (
-              <div key={id} style={{background:T.bgCard2,borderRadius:10,padding:"10px 12px",border:`1px solid ${isSet?"rgba(34,197,94,0.2)":T.border}`}}>
+          {currentRound.slots.map(({id,home:hp,away:ap})=>{
+            const set=isSlotSet(id);
+            const result=data.matchActuals[id];
+            return(
+              <div key={id} style={{background:T.bgCard2,borderRadius:10,padding:"10px 12px",
+                border:`1px solid ${set?"rgba(34,197,94,0.25)":result?"rgba(240,192,64,0.2)":T.border}`}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                  <div style={{background:STAGE_COLORS["Round of 32"],color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700}}>#{id}</div>
-                  <span style={{fontSize:10,color:T.textMute}}>{hp} vs {ap}</span>
-                  {isSet&&<span style={{marginLeft:"auto",fontSize:10,color:T.green}}>✅ Set</span>}
+                  <div style={{background:currentRound.color,color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:700}}>#{id}</div>
+                  <span style={{fontSize:10,color:T.textMute,flex:1}}>{hp} vs {ap}</span>
+                  {set&&<span style={{fontSize:10,color:T.green,fontWeight:700}}>✅ Set</span>}
+                  {result&&<span style={{fontSize:10,color:T.gold,fontWeight:700}}>🏆 {result.score}</span>}
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 30px 1fr",gap:6,alignItems:"center"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 24px 1fr",gap:6,alignItems:"center"}}>
                   <input style={{...S.inp,fontSize:12,padding:"6px 10px"}} placeholder={hp}
                     value={form[`${id}_home`]}
                     onChange={e=>setForm(f=>({...f,[`${id}_home`]:e.target.value}))}/>
@@ -2732,7 +2834,7 @@ function AdminBracket({data,update,toast_}) {
             );
           })}
         </div>
-        <button style={{...S.btn,marginTop:12}} onClick={saveAll}>💾 Save All to Fixtures</button>
+        <button style={{...S.btn,marginTop:12}} onClick={saveAll}>💾 Save All Rounds</button>
       </div>
     </div>
   );
@@ -3488,3 +3590,5 @@ function Toast({toast}) {
     }}>{toast.msg}</div>
   );
 }
+
+
