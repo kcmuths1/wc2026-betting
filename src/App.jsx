@@ -3488,5 +3488,3 @@ function Toast({toast}) {
     }}>{toast.msg}</div>
   );
 }
-
-
