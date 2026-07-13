@@ -2184,6 +2184,83 @@ function AdminResults({data,update,toast_}) {
         )}
       </div>
       <div style={S.card}>
+        <div style={{...S.card,border:"1px solid rgba(239,68,68,0.3)",background:"rgba(239,68,68,0.05)"}}>
+          <div style={{...S.blockTitle,color:"#ef4444"}}>⚠️ Void Round — Remove All Points</div>
+          <p style={{fontSize:13,color:T.textDim,marginBottom:12,lineHeight:1.6}}>
+            Clears all match results for a round so <strong style={{color:T.text}}>no points are awarded to anyone</strong> for those matches. Use when a round was affected by downtime. Players keep their predictions but score 0 for that round.
+          </p>
+          {[
+            {label:"Round of 32",ids:Array.from({length:16},(_,i)=>i+73),color:"#01579B"},
+            {label:"Round of 16",ids:Array.from({length:8},(_,i)=>i+89),color:"#4A148C"},
+            {label:"Quarterfinals",ids:[97,98,99,100],color:"#880E4F"},
+            {label:"Semifinals",ids:[101,102],color:"#E65100"},
+            {label:"Final & 3rd Place",ids:[103,104],color:"#B71C1C"},
+          ].map(({label,ids,color})=>{
+            const anyResults=ids.some(id=>data.matchActuals[id]?.score);
+            const [confirming,setConfirming]=useState(false);
+            return(
+              <div key={label} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${T.border}`,flexWrap:"wrap"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:T.text,fontSize:13}}>{label}</div>
+                  <div style={{fontSize:11,color:T.textDim,marginTop:2}}>
+                    Matches {ids[0]}–{ids[ids.length-1]} · {anyResults?
+                      <span style={{color:"#ef4444"}}>⚠️ {ids.filter(id=>data.matchActuals[id]?.score).length} results entered</span>:
+                      <span style={{color:T.green}}>✅ No results entered</span>}
+                  </div>
+                </div>
+                {!confirming?(
+                  <button
+                    style={{...S.btn,width:"auto",padding:"6px 14px",fontSize:12,
+                      background:anyResults?"rgba(239,68,68,0.15)":"rgba(255,255,255,0.05)",
+                      color:anyResults?"#ef4444":T.textMute,
+                      border:`1px solid ${anyResults?"rgba(239,68,68,0.3)":T.border}`,
+                      boxShadow:"none"}}
+                    onClick={()=>anyResults&&setConfirming(true)}
+                    disabled={!anyResults}
+                  >
+                    🚫 Void {label}
+                  </button>
+                ):(
+                  <div style={{display:"flex",gap:6,flexDirection:"column",width:"100%",marginTop:6}}>
+                    <div style={{background:"rgba(239,68,68,0.1)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#fca5a5",fontWeight:600}}>
+                      This will remove results for matches {ids.join(", ")} — 0 pts for everyone for this round. Cannot be undone (except re-entering results). Confirm?
+                    </div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button style={{...S.btn,flex:1,background:"#C62828",fontSize:12,padding:"8px"}}
+                        onClick={()=>{
+                          update(d=>{
+                            ids.forEach(id=>{
+                              delete d.matchActuals[id];
+                              // Also clear scorers for these matches
+                              if(d.matchScorers) delete d.matchScorers[id];
+                            });
+                            // Log it
+                            d.changeLog.push({
+                              date:new Date().toISOString().slice(0,10),
+                              player:"Admin",
+                              what:`Voided ${label} — matches ${ids[0]}-${ids[ids.length-1]}`,
+                              stage:label,
+                              deduction:0,
+                            });
+                            return d;
+                          });
+                          setConfirming(false);
+                          toast_(`✅ ${label} voided — all ${ids.length} match results cleared`);
+                        }}>
+                        ✅ Yes, void {label}
+                      </button>
+                      <button style={{...S.btn,flex:1,background:T.bgCard2,fontSize:12,padding:"8px",boxShadow:"none"}}
+                        onClick={()=>setConfirming(false)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
         <div style={S.blockTitle}>🏅 Tournament Awards</div>
         {[{k:"_winner",l:"🏆 Winner"},{k:"_runnerUp",l:"🥈 Runner-Up"},{k:"_thirdPlace",l:"🥉 3rd Place"},{k:"_goldenBoot",l:"⚽ Golden Boot"},{k:"_goldenBall",l:"🎖 Golden Ball"},{k:"_goldenGlove",l:"🧤 Golden Glove"}].map(f=>{
           const isText = f.k==="_goldenBoot"||f.k==="_goldenBall"||f.k==="_goldenGlove";
